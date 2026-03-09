@@ -14,6 +14,9 @@ function Header() {
         <nav style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '16px' }}>
             <span>Hola, {usuario?.nombre ?? usuario?.correo}</span>
             <span>Rol: {usuario?.rol}</span>
+            <span>
+                id: {usuario?.id}
+            </span>
             <button onClick={logout}>Cerrar sesión</button>
         </nav>
     )

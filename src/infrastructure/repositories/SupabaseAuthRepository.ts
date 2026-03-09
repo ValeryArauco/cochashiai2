@@ -1,6 +1,8 @@
 import { supabase } from '../../lib/supabase'
 import { IAuthRepository } from '../../domain/repositories/IAuthRepository'
 import { Usuario, RolUsuario } from '../../domain/models/Usuario'
+import { UsuarioMapper } from '../mappers/UsuarioMapper'
+import { UsuarioDTO } from '../dtos/UsuarioDTO'
 
 export class SupabaseAuthRepository implements IAuthRepository {
 
@@ -21,6 +23,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
   }
 
   async logout(): Promise<void> {
+    
     const { error } = await supabase.auth.signOut()
     if (error) throw new Error(error.message)
   }
@@ -42,19 +45,6 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
     if (error || !data) throw new Error('No se encontró el perfil del usuario')
 
-    return {
-      id: data.id,
-      correo: data.correo,
-      rol: data.rol as RolUsuario,
-      nombre: data.nombre,
-      apellidoPaterno: data.apellido_paterno,
-      apellidoMaterno: data.apellido_materno,
-      fechaNacimiento: data.fecha_nacimiento,
-      numeroCelular: data.numero_celular,
-      genero: data.genero,
-      avatarUrl: data.avatar_url,
-      ci: data.ci,
-      
-    }
+    return UsuarioMapper.toDomain(data as UsuarioDTO) 
   }
 }

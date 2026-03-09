@@ -1,4 +1,4 @@
-import { LoginForm } from '../../presentation/components/auth/LoginForm'
+import { LoginForm } from '../../../presentation/components/auth/LoginForm'
 import { Grid, Box, Typography } from '@mui/material'
 
 export default function LoginPage() {

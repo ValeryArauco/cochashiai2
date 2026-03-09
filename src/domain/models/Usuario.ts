@@ -1,5 +1,5 @@
 export type RolUsuario = 'admin' | 'sensei' | 'judoka'
-export type Genero = 'Masculino' | 'Femenino'
+export type Genero = 'Masculino' | 'Femenino' | 'Prefiero no decir'
 
 export interface Usuario {
   id: string
@@ -9,7 +9,7 @@ export interface Usuario {
   apellidoPaterno?: string
   apellidoMaterno?: string
   fechaNacimiento?: string
-  numeroCelular?: string
+  celular?: string
   genero?: string
   avatarUrl?: string
   ci?: string
