@@ -1,7 +1,9 @@
 'use client'
 
 import { use } from 'react'
-import { Box, CircularProgress, Alert, Divider } from '@mui/material'
+import { Box, CircularProgress, Alert, Divider, IconButton } from '@mui/material'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { useRouter } from 'next/navigation'
 import { useTorneoDetalle } from '@/presentation/hooks/useTorneoDetalle'
 import { useAuth } from '@/presentation/context/AuthContext'
 import { useJudoka } from '@/presentation/hooks/useJudoka'
@@ -19,6 +21,7 @@ interface PageProps {
 
 export default function TorneoDetallePage({ params }: PageProps) {
   const { id } = use(params)
+  const router = useRouter()
   const { usuario } = useAuth()
   const { judoka } = useJudoka()
   const { torneo, inscripcionActual, cargando, error, inscripcionAbierta } = useTorneoDetalle(id)
@@ -52,6 +55,12 @@ export default function TorneoDetallePage({ params }: PageProps) {
 
   return (
     <Box sx={{ p: 3, maxWidth: 960, mx: 'auto' }}>
+      <Box sx={{ mb: 2 }}>
+        <IconButton onClick={() => router.back()} edge="start" aria-label="Volver">
+          <ArrowBackIcon />
+        </IconButton>
+      </Box>
+
       <TorneoDetalleHeader torneo={torneo} />
 
       <TorneoFechasTable fechas={torneo.fechas} />
