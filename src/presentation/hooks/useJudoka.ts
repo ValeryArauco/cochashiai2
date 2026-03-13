@@ -27,8 +27,8 @@ export function useJudoka() {
     setError(null)
     setExito(false)
     try {
-      await repo.actualizar(judoka.id, datos)
-      setJudoka({ ...judoka, ...datos })
+      const judokaActualizado = await repo.actualizar(judoka.id, datos)
+      setJudoka(judokaActualizado)
       setExito(true)
     } catch (e: any) {
       setError(e.message)

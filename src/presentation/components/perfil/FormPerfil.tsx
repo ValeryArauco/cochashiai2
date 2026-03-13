@@ -26,7 +26,7 @@ const tiposSangre: TipoSangre[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', '
 const relaciones: RelacionContacto[] = ['madre', 'padre', 'tutor', 'hermano/a', 'conyuge', 'amigo/a', 'otro']
 
 export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props) {
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<PerfilData>({
+  const { handleSubmit, reset, control, formState: { errors } } = useForm<PerfilData>({
     resolver: zodResolver(perfilSchema),
   })
 
@@ -59,14 +59,21 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
       </Typography>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
-        <TextField
-          label="Fecha de Nacimiento"
-          type="date"
-          InputLabelProps={{ shrink: true }}
-          {...register('fechaNacimiento')}
-          error={!!errors.fechaNacimiento}
-          helperText={errors.fechaNacimiento?.message}
-          disabled={guardando}
+        <Controller
+          name="fechaNacimiento"
+          control={control}
+          render={({ field }) => (
+            <TextField
+              label="Fecha de Nacimiento"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              {...field}
+              value={field.value ?? ''}
+              error={!!errors.fechaNacimiento}
+              helperText={errors.fechaNacimiento?.message}
+              disabled={guardando}
+            />
+          )}
         />
 
         <Controller
@@ -108,6 +115,19 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
         <Controller
+          name="tipoSangre"
+          control={control}
+          render={({ field }) => (
+            <FormControl disabled={guardando}>
+              <InputLabel>Tipo de sangre</InputLabel>
+              <Select label="Tipo de sangre" {...field} value={field.value ?? ''}>
+                {tiposSangre.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+              </Select>
+            </FormControl>
+          )}
+        />
+        
+        <Controller
           name="contactoEmergencia"
           control={control}
           render={({ field }) => (
@@ -137,18 +157,7 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
           )}
         />
 
-        <Controller
-          name="tipoSangre"
-          control={control}
-          render={({ field }) => (
-            <FormControl disabled={guardando}>
-              <InputLabel>Tipo de sangre</InputLabel>
-              <Select label="Tipo de sangre" {...field} value={field.value ?? ''}>
-                {tiposSangre.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-              </Select>
-            </FormControl>
-          )}
-        />
+        
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', flex: 1, alignItems: 'flex-end' }}>

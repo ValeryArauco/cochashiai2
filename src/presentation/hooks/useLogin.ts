@@ -21,7 +21,7 @@ export function useLogin() {
 
         try {
             await loginUseCase.execute(email, password)
-            router.push('/dashboard')
+            router.push('/torneos')
         } catch (e: any) {
             setError(e.message)
         } finally {

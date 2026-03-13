@@ -23,20 +23,29 @@ export async function middleware(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
 
     const rutaActual = request.nextUrl.pathname
-    const esRutaProtegida = rutaActual.startsWith('/dashboard') || rutaActual.startsWith('/torneos')
+
+    const esRutaProtegida =
+        rutaActual.startsWith('/torneos') ||
+        rutaActual.startsWith('/perfil')
+
     const esRutaDeAuth = rutaActual.startsWith('/login')
+
+
+    if (rutaActual === '/') {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
 
     if (!session && esRutaProtegida) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
     if (session && esRutaDeAuth) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        return NextResponse.redirect(new URL('/torneos', request.url))
     }
 
     return response
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*', '/torneos/:path*', '/login'],
+    matcher: ['/', '/torneos/:path*', '/perfil/:path*', '/login'],
 }
