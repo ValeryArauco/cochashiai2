@@ -31,6 +31,30 @@ export function TorneoFormStep({ defaultValues, onSiguiente }: Props) {
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'fechas' })
   const clubIdSeleccionado = watch('clubId')
+  const fechaLimite = watch('fechaLimiteInscripcion')
+  const horaLimite = watch('horaLimiteInscripcion')
+  const fechasWatch = watch('fechas')
+
+  function getConstraints(idx: number) {
+    const prev = idx > 0 ? fechasWatch[idx - 1] : null
+    const curr = fechasWatch[idx]
+
+    const minFecha = prev?.fecha && prev.fecha > (fechaLimite ?? '')
+      ? prev.fecha
+      : fechaLimite || undefined
+
+    let minHoraInicio: string | undefined
+    if (curr?.fecha && fechaLimite && curr.fecha === fechaLimite) {
+      minHoraInicio = horaLimite || '00:00'
+    }
+    if (prev && curr?.fecha && prev.fecha && curr.fecha === prev.fecha) {
+      minHoraInicio = prev.horaFin || '23:59'
+    }
+
+    const minHoraFin = curr?.horaInicio || undefined
+
+    return { minFecha, minHoraInicio, minHoraFin }
+  }
 
   const onSubmit = (data: TorneoFormData) => {
     const club = clubes.find(c => c.id === data.clubId)
@@ -68,7 +92,7 @@ export function TorneoFormStep({ defaultValues, onSiguiente }: Props) {
         )}
       />
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
         <Controller
           name="fechaLimiteInscripcion"
           control={control}
@@ -76,13 +100,12 @@ export function TorneoFormStep({ defaultValues, onSiguiente }: Props) {
             <TextField
               label="Fecha límite inscripción"
               type="date"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               {...field}
               value={field.value ?? ''}
               error={!!errors.fechaLimiteInscripcion}
               helperText={errors.fechaLimiteInscripcion?.message}
               fullWidth
-              sx={{ gridColumn: { xs: 'span 2', sm: 'span 1' } }}
             />
           )}
         />
@@ -93,7 +116,7 @@ export function TorneoFormStep({ defaultValues, onSiguiente }: Props) {
             <TextField
               label="Hora límite (opcional)"
               type="time"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               {...field}
               value={field.value ?? ''}
               fullWidth
@@ -125,7 +148,7 @@ export function TorneoFormStep({ defaultValues, onSiguiente }: Props) {
         <Button
           size="small"
           startIcon={<AddIcon />}
-          onClick={() => append({ fecha: '', horaInicio: '', horaFin: '' })}
+          onClick={() => append({ fecha: '', horaInicio: '', horaFin: '', descripcion: '' })}
         >
           Agregar fecha
         </Button>
@@ -135,62 +158,106 @@ export function TorneoFormStep({ defaultValues, onSiguiente }: Props) {
         <Typography color="error" variant="caption">{errors.fechas.message}</Typography>
       )}
 
-      {fields.map((field, idx) => (
-        
-        <Box key={field.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 1, alignItems: 'flex-start' }}>
+      {fields.map((field, idx) => {
+        const { minFecha, minHoraInicio, minHoraFin } = getConstraints(idx)
+        return (
+        <Box
+          key={field.id}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            p: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
+              Día {idx + 1}
+            </Typography>
+            <IconButton
+              onClick={() => remove(idx)}
+              disabled={fields.length === 1}
+              color="error"
+              size="small"
+              sx={{ m: -1 }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr 1fr' }, gap: 2 }}>
+            <Controller
+              name={`fechas.${idx}.fecha`}
+              control={control}
+              render={({ field: f }) => (
+                <TextField
+                  label="Fecha"
+                  type="date"
+                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: minFecha } }}
+                  {...f}
+                  value={f.value ?? ''}
+                  error={!!errors.fechas?.[idx]?.fecha}
+                  helperText={errors.fechas?.[idx]?.fecha?.message}
+                  size="small"
+                  fullWidth
+                />
+              )}
+            />
+            <Controller
+              name={`fechas.${idx}.horaInicio`}
+              control={control}
+              render={({ field: f }) => (
+                <TextField
+                  label="Hora inicio"
+                  type="time"
+                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: minHoraInicio } }}
+                  {...f}
+                  value={f.value ?? ''}
+                  error={!!errors.fechas?.[idx]?.horaInicio}
+                  helperText={errors.fechas?.[idx]?.horaInicio?.message}
+                  size="small"
+                  fullWidth
+                />
+              )}
+            />
+            <Controller
+              name={`fechas.${idx}.horaFin`}
+              control={control}
+              render={({ field: f }) => (
+                <TextField
+                  label="Hora fin"
+                  type="time"
+                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: minHoraFin } }}
+                  {...f}
+                  value={f.value ?? ''}
+                  error={!!errors.fechas?.[idx]?.horaFin}
+                  helperText={errors.fechas?.[idx]?.horaFin?.message}
+                  size="small"
+                  fullWidth
+                />
+              )}
+            />
+          </Box>
+
           <Controller
-            name={`fechas.${idx}.fecha`}
+            name={`fechas.${idx}.descripcion`}
             control={control}
             render={({ field: f }) => (
               <TextField
-                label={`Día ${idx + 1}`}
-                type="date"
-                InputLabelProps={{ shrink: true }}
+                label="Descripción (opcional)"
                 {...f}
                 value={f.value ?? ''}
-                error={!!errors.fechas?.[idx]?.fecha}
-                helperText={errors.fechas?.[idx]?.fecha?.message}
                 size="small"
+                fullWidth
+                placeholder="Ej: Pesaje, Competencias, Premiación…"
               />
             )}
           />
-          <Controller
-            name={`fechas.${idx}.horaInicio`}
-            control={control}
-            render={({ field: f }) => (
-              <TextField
-                label="Hora inicio"
-                type="time"
-                InputLabelProps={{ shrink: true }}
-                {...f}
-                value={f.value ?? ''}
-                error={!!errors.fechas?.[idx]?.horaInicio}
-                helperText={errors.fechas?.[idx]?.horaInicio?.message}
-                size="small"
-              />
-            )}
-          />
-          <Controller
-            name={`fechas.${idx}.horaFin`}
-            control={control}
-            render={({ field: f }) => (
-              <TextField
-                label="Hora fin"
-                type="time"
-                InputLabelProps={{ shrink: true }}
-                {...f}
-                value={f.value ?? ''}
-                error={!!errors.fechas?.[idx]?.horaFin}
-                helperText={errors.fechas?.[idx]?.horaFin?.message}
-                size="small"
-              />
-            )}
-          />
-          <IconButton onClick={() => remove(idx)} disabled={fields.length === 1} color="error" size="small">
-            <DeleteIcon />
-          </IconButton>
         </Box>
-      ))}
+      )})}
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
         <Button type="submit" variant="contained">Siguiente →</Button>

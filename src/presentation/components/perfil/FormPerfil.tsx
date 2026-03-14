@@ -66,7 +66,7 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
             <TextField
               label="Fecha de Nacimiento"
               type="date"
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               {...field}
               value={field.value ?? ''}
               error={!!errors.fechaNacimiento}
