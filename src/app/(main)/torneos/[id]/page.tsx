@@ -41,7 +41,7 @@ export default function TorneoDetallePage({ params }: PageProps) {
 
   if (error || !torneo) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
         <Alert severity="error">{error ?? 'Torneo no encontrado'}</Alert>
       </Box>
     )
@@ -54,7 +54,7 @@ export default function TorneoDetallePage({ params }: PageProps) {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 960, mx: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1100, mx: 'auto' }}>
       <Box sx={{ mb: 2 }}>
         <IconButton onClick={() => router.back()} edge="start" aria-label="Volver">
           <ArrowBackIcon />
@@ -81,7 +81,7 @@ export default function TorneoDetallePage({ params }: PageProps) {
         </Box>
       )}
 
-      <Divider sx={{ my: 3 }} />
+      
 
       <LlavesView
         llave={llave}

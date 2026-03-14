@@ -19,7 +19,7 @@ export function TorneoDetalleHeader({ torneo }: { torneo: Torneo }) {
   return (
     <Box sx={{ mb: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
-        <Typography variant="h4" fontWeight={700} flex={1}>{torneo.nombre}</Typography>
+        <Typography variant="h5" fontWeight={700} flex={1}>{torneo.nombre}</Typography>
         <Chip
           label={inscripcionAbierta ? 'Inscripción abierta' : 'Inscripción cerrada'}
           color={inscripcionAbierta ? 'success' : 'default'}

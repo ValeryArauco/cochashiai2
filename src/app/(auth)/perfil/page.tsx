@@ -27,7 +27,7 @@ export default function PerfilPage() {
         <IconButton onClick={() => router.back()}>
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h5">Mi Perfil</Typography>
+        <Typography variant="h5" fontWeight={700}>Mi Perfil</Typography>
       </Box>
 
     

@@ -1,7 +1,7 @@
 'use client'
 import {
   Box, Typography, Table, TableHead, TableBody, TableRow, TableCell,
-  Chip, Button, Stack, Paper, CircularProgress, Alert,
+  Chip, Button, Stack, Paper, CircularProgress, Divider,
 } from '@mui/material'
 import { useState } from 'react'
 import { Combate, EstadoCombate } from '../../../domain/models/Combate'
@@ -41,9 +41,7 @@ export function LlavesView({ llave, combates, cargando, rol, onRegistrarResultad
 
   if (!llave) {
     return (
-      <Alert severity="info" sx={{ mt: 2 }}>
-        Aún no se han generado las llaves para esta categoría.
-      </Alert>
+      <></>
     )
   }
 

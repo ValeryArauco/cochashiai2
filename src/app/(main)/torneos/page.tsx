@@ -19,7 +19,7 @@ export default function TorneosPage() {
   const esDesktop = useMediaQuery(theme.breakpoints.up('sm'))
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1100, mx: 'auto' }}>
       <Typography variant="h5" fontWeight="bold" mb={2}>
         Torneos
       </Typography>
