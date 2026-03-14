@@ -53,6 +53,7 @@ export class SupabaseTorneoRepository implements ITorneoRepository {
       .from('torneos')
       .select(SELECT)
       .eq('id', id)
+      .eq('activo', true)
       .single()
 
     if (error || !data) throw new Error('Torneo no encontrado')
@@ -107,5 +108,14 @@ export class SupabaseTorneoRepository implements ITorneoRepository {
     }
 
     return this.obtenerPorId(torneoId)
+  }
+
+  async eliminar(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('torneos')
+      .update({ activo: false })
+      .eq('id', id)
+
+    if (error) throw new Error('No se pudo eliminar el torneo')
   }
 }

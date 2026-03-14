@@ -1,8 +1,11 @@
 'use client'
-import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material'
+import { Box, TextField, FormControl, InputLabel, Select, MenuItem, ToggleButtonGroup, ToggleButton, Tooltip } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import InputAdornment from '@mui/material/InputAdornment'
 import { FiltrosTorneos as Filtros } from '../../../domain/repositories/ITorneoRepository'
+import { OrdenTorneos, OrdenCampo, OrdenDir } from '../../hooks/useTorneos'
 
 const MESES = [
   'Todos', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -15,11 +18,16 @@ const AÑOS = Array.from({ length: 5 }, (_, i) => añoActual - 1 + i)
 interface Props {
   filtros: Filtros
   onChange: (filtros: Filtros) => void
+  orden: OrdenTorneos
+  onOrdenChange: (orden: OrdenTorneos) => void
 }
 
-export function FiltrosTorneos({ filtros, onChange }: Props) {
+export function FiltrosTorneos({ filtros, onChange, orden, onOrdenChange }: Props) {
+  const handleCampo = (campo: OrdenCampo) => onOrdenChange({ ...orden, campo })
+  const handleDir = (dir: OrdenDir) => onOrdenChange({ ...orden, dir })
+
   return (
-    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3, alignItems: 'center' }}>
       <TextField
         placeholder="Buscar torneo..."
         value={filtros.nombre ?? ''}
@@ -53,6 +61,37 @@ export function FiltrosTorneos({ filtros, onChange }: Props) {
           ))}
         </Select>
       </FormControl>
+
+      <FormControl size="small" sx={{ minWidth: 200 }}>
+        <InputLabel>Ordenar por</InputLabel>
+        <Select
+          label="Ordenar por"
+          value={orden.campo}
+          onChange={e => handleCampo(e.target.value as OrdenCampo)}
+        >
+          <MenuItem value="primerFechaTorneo">Fecha del torneo</MenuItem>
+          <MenuItem value="fechaLimiteInscripcion">Cierre de inscripción</MenuItem>
+        </Select>
+      </FormControl>
+
+      <ToggleButtonGroup
+        size="small"
+        exclusive
+        value={orden.dir}
+        onChange={(_, val) => { if (val) handleDir(val as OrdenDir) }}
+        aria-label="dirección de orden"
+      >
+        <Tooltip title="Ascendente">
+          <ToggleButton value="asc" aria-label="ascendente">
+            <ArrowUpwardIcon fontSize="small" />
+          </ToggleButton>
+        </Tooltip>
+        <Tooltip title="Descendente">
+          <ToggleButton value="desc" aria-label="descendente">
+            <ArrowDownwardIcon fontSize="small" />
+          </ToggleButton>
+        </Tooltip>
+      </ToggleButtonGroup>
     </Box>
   )
 }

@@ -45,6 +45,7 @@ export function useCrearTorneo(onExito?: () => void) {
           horaLimiteInscripcion: formData.horaLimiteInscripcion,
           numTatamis: formData.numTatamis,
           activo: true,
+          organizadoPor: clubSeleccionado.id,
         },
         formData.fechas.map(f => ({
           fecha: f.fecha,

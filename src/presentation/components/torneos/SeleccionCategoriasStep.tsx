@@ -19,6 +19,7 @@ interface Props {
   onGuardar: () => void
   guardando: boolean
   error: string | null
+  labelGuardar?: string
 }
 
 function triState(total: number, seleccionados: number): boolean | 'indeterminate' {
@@ -27,7 +28,7 @@ function triState(total: number, seleccionados: number): boolean | 'indeterminat
   return 'indeterminate'
 }
 
-export function SeleccionCategoriasStep({ seleccionadas, onChange, onVolver, onGuardar, guardando, error }: Props) {
+export function SeleccionCategoriasStep({ seleccionadas, onChange, onVolver, onGuardar, guardando, error, labelGuardar }: Props) {
   const { categorias, cargando } = useCategorias()
 
   const toggle = (id: string) => {
@@ -141,7 +142,7 @@ export function SeleccionCategoriasStep({ seleccionadas, onChange, onVolver, onG
           disabled={guardando || seleccionadas.length === 0}
           startIcon={guardando ? <CircularProgress size={18} color="inherit" /> : undefined}
         >
-          {guardando ? 'Creando torneo...' : `Crear torneo (${seleccionadas.length} categorías)`}
+          {guardando ? 'Guardando...' : `${labelGuardar ?? 'Crear torneo'} (${seleccionadas.length} categorías)`}
         </Button>
       </Box>
     </Box>

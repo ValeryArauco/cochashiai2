@@ -40,9 +40,17 @@ export default function TorneoDetallePage({ params }: PageProps) {
   }
 
   if (error || !torneo) {
+    const noDisponible = !torneo || error === 'Torneo no encontrado'
     return (
       <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
-        <Alert severity="error">{error ?? 'Torneo no encontrado'}</Alert>
+        <IconButton onClick={() => router.back()} edge="start" sx={{ mb: 2 }} aria-label="Volver">
+          <ArrowBackIcon />
+        </IconButton>
+        <Alert severity={noDisponible ? 'warning' : 'error'}>
+          {noDisponible
+            ? 'Este torneo no está disponible o fue eliminado.'
+            : error}
+        </Alert>
       </Box>
     )
   }

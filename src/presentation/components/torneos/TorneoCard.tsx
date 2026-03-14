@@ -1,10 +1,11 @@
 'use client'
 import {
-  Card, CardActionArea, CardContent, Typography, Chip, Box, Stack,
+  Card, CardActionArea, CardContent, CardActions, Typography, Chip, Box, Stack, IconButton, Tooltip,
 } from '@mui/material'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { useRouter } from 'next/navigation'
 import { Torneo } from '../../../domain/models/Torneo'
 
@@ -14,9 +15,12 @@ function formatearFecha(fecha: string) {
   })
 }
 
-interface Props { torneo: Torneo }
+interface Props {
+  torneo: Torneo
+  onEliminar?: () => void
+}
 
-export function TorneoCard({ torneo }: Props) {
+export function TorneoCard({ torneo, onEliminar }: Props) {
   const router = useRouter()
   const inscripcionAbierta = new Date() <= new Date(
     `${torneo.fechaLimiteInscripcion}T${torneo.horaLimiteInscripcion ?? '23:59:59'}`
@@ -31,11 +35,11 @@ export function TorneoCard({ torneo }: Props) {
       <CardActionArea onClick={() => router.push(`/torneos/${torneo.id}`)} sx={{ flex: 1 }}>
         <CardContent sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-            <Typography variant="h6" fontWeight={700} sx={{ flex: 1, mr: 1 }}>
+            <Typography variant="h6" fontWeight={700} lineHeight={1.3} sx={{ flex: 1, mr: 1 }}>
               {torneo.nombre}
             </Typography>
             <Chip
-              label={inscripcionAbierta ? 'Inscripción abierta' : 'Cerrada'}
+              label={inscripcionAbierta ? 'Abierto' : 'Cerrado'}
               color={inscripcionAbierta ? 'success' : 'default'}
               size="small"
             />
@@ -69,6 +73,16 @@ export function TorneoCard({ torneo }: Props) {
           </Stack>
         </CardContent>
       </CardActionArea>
+
+      {onEliminar && (
+        <CardActions sx={{ justifyContent: 'flex-end', pt: 0, px: 2, pb: 1 }}>
+          <Tooltip title="Eliminar torneo">
+            <IconButton size="small" color="error" onClick={e => { e.stopPropagation(); onEliminar() }}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </CardActions>
+      )}
     </Card>
   )
 }

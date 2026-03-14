@@ -12,6 +12,7 @@ export interface ITorneoRepository {
     fechas: Omit<TorneoFecha, 'id' | 'torneoId'>[],
     categoriaIds: string[]
   ): Promise<Torneo>
+  eliminar(id: string): Promise<void>
   listar(filtros?: FiltrosTorneos): Promise<Torneo[]>
   obtenerPorId(id: string): Promise<Torneo>
 }

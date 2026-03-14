@@ -17,7 +17,7 @@ interface Props {
 
 export function CrearTorneoModal({ abierto, onCerrar, onExito }: Props) {
   const {
-    paso, formData, clubSeleccionado, categoriasSeleccionadas, setCategoriasSeleccionadas,
+    paso, formData, categoriasSeleccionadas, setCategoriasSeleccionadas,
     guardando, error, irAPaso2, volver, guardar, resetear,
   } = useCrearTorneo(onExito)
 
@@ -29,7 +29,7 @@ export function CrearTorneoModal({ abierto, onCerrar, onExito }: Props) {
   return (
     <Dialog open={abierto} onClose={handleCerrar} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        Crear nuevo torneo
+        Nuevo torneo
         <IconButton onClick={handleCerrar} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
 

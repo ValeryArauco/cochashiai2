@@ -52,17 +52,16 @@ export const torneoSchema = z
     for (let i = 1; i < fechas.length; i++) {
       const prev = fechas[i - 1]
       const curr = fechas[i]
-      if (!prev.fecha || !prev.horaInicio || !curr.fecha || !curr.horaInicio) continue
-
-      const finPrevTs = toTs(prev.fecha, prev.horaFin || '23:59')
-      const inicioCurrTs = toTs(curr.fecha, curr.horaInicio)
-
-      if (inicioCurrTs < finPrevTs) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['fechas', i, 'horaInicio'],
-          message: `Debe ser después del fin del día ${i} (${prev.fecha} ${prev.horaFin || '23:59'})`,
-        })
+      if (prev.fecha && prev.horaInicio && curr.fecha && curr.horaInicio) {
+        const finPrevTs = toTs(prev.fecha, prev.horaFin || '23:59')
+        const inicioCurrTs = toTs(curr.fecha, curr.horaInicio)
+        if (inicioCurrTs < finPrevTs) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['fechas', i, 'horaInicio'],
+            message: `Debe ser después del fin del día ${i} (${prev.fecha} ${prev.horaFin || '23:59'})`,
+          })
+        }
       }
     }
   })
