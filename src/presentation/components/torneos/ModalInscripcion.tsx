@@ -9,6 +9,19 @@ import { Judoka } from '../../../domain/models/Judoka'
 import { TorneoCategoria } from '../../../domain/models/TorneoCategoria'
 import { categoriasElegibles, useInscripcion } from '../../hooks/useInscripcion'
 
+const CAMPOS_REQUERIDOS: { label: string; check: (j: Judoka) => boolean }[] = [
+  { label: 'Fecha de nacimiento', check: j => !!j.usuario.fechaNacimiento },
+  { label: 'Género (debe ser Masculino o Femenino)', check: j => j.usuario.genero === 'Masculino' || j.usuario.genero === 'Femenino' },
+  { label: 'Celular', check: j => !!j.usuario.celular },
+  { label: 'Tipo de sangre', check: j => !!j.tipoSangre },
+  { label: 'Contacto de emergencia', check: j => !!j.contactoEmergencia },
+  { label: 'Relación con contacto de emergencia', check: j => !!j.relacionContacto },
+]
+
+function camposFaltantes(judoka: Judoka): string[] {
+  return CAMPOS_REQUERIDOS.filter(c => !c.check(judoka)).map(c => c.label)
+}
+
 interface Props {
   abierto: boolean
   onCerrar: () => void
@@ -21,6 +34,7 @@ export function ModalInscripcion({ abierto, onCerrar, judoka, torneoCategorias, 
   const [torneoCategoriaIdSeleccionada, setSeleccionada] = useState('')
   const { enviando, error, exito, solicitar } = useInscripcion(judoka, torneoId)
   const elegibles = categoriasElegibles(judoka, torneoCategorias)
+  const faltantes = camposFaltantes(judoka)
 
   const handleConfirmar = async () => {
     if (!torneoCategoriaIdSeleccionada) return
@@ -33,6 +47,13 @@ export function ModalInscripcion({ abierto, onCerrar, judoka, torneoCategorias, 
       <DialogContent>
         {exito ? (
           <Alert severity="success">Tu solicitud de inscripción fue enviada correctamente.</Alert>
+        ) : faltantes.length > 0 ? (
+          <Alert severity="warning">
+            Para inscribirte debes completar estos datos en tu perfil:
+            <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
+              {faltantes.map(campo => <li key={campo}>{campo}</li>)}
+            </Box>
+          </Alert>
         ) : (
           <>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -74,7 +95,7 @@ export function ModalInscripcion({ abierto, onCerrar, judoka, torneoCategorias, 
       </DialogContent>
       <DialogActions>
         <Button onClick={onCerrar}>{exito ? 'Cerrar' : 'Cancelar'}</Button>
-        {!exito && elegibles.length > 0 && (
+        {!exito && faltantes.length === 0 && elegibles.length > 0 && (
           <Button
             variant="contained"
             onClick={handleConfirmar}

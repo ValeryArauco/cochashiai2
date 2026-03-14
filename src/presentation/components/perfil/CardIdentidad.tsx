@@ -1,7 +1,5 @@
 'use client'
-import { useRef } from 'react'
-import { Box, Avatar, Typography, Divider, IconButton, Tooltip } from '@mui/material'
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
+import { Box, Avatar, Typography, Divider } from '@mui/material'
 import { Usuario } from '../../../domain/models/Usuario'
 
 interface Props {
@@ -9,9 +7,6 @@ interface Props {
 }
 
 export function CardIdentidad({ perfil }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
-
-
   const campo = (label: string, valor?: string) => (
     <Box sx={{ mb: 2 }}>
       <Typography variant="caption" color="text.secondary">{label}</Typography>
@@ -22,17 +17,10 @@ export function CardIdentidad({ perfil }: Props) {
 
   return (
     <Box sx={{ bgcolor: 'background.paper', borderRadius: 3, p: 3, height: '100%' }}>
-
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, position: 'relative' }}>
-        <Box sx={{ position: 'relative', display: 'inline-block' }}>
-          <Avatar
-            src={perfil.avatarUrl}
-            sx={{ width: 120, height: 120, fontSize: 40 }}
-          >
-            {perfil.nombre?.[0]}
-          </Avatar>
-          
-        </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        <Avatar src={perfil.avatarUrl} sx={{ width: 120, height: 120, fontSize: 40 }}>
+          {perfil.nombre?.[0]}
+        </Avatar>
       </Box>
 
       {campo('Nombre', perfil.nombre)}

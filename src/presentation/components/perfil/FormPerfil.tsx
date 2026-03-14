@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box, Button, TextField, Typography, MenuItem,
-  Select, FormControl, InputLabel, Alert, CircularProgress, Divider
+  Select, FormControl, InputLabel, FormHelperText, Alert, CircularProgress, Divider
 } from '@mui/material'
 import SaveIcon from '@mui/icons-material/Save'
 import { Judoka, TipoSangre, RelacionContacto } from '../../../domain/models/Judoka'
@@ -97,11 +97,12 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
           name="genero"
           control={control}
           render={({ field }) => (
-            <FormControl disabled={guardando}>
+            <FormControl disabled={guardando} error={!!errors.genero}>
               <InputLabel>Género</InputLabel>
               <Select label="Género" {...field} value={field.value ?? ''}>
                 {generos.map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
               </Select>
+              <FormHelperText>{errors.genero?.message}</FormHelperText>
             </FormControl>
           )}
         />
@@ -118,15 +119,16 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
           name="tipoSangre"
           control={control}
           render={({ field }) => (
-            <FormControl disabled={guardando}>
+            <FormControl disabled={guardando} error={!!errors.tipoSangre}>
               <InputLabel>Tipo de sangre</InputLabel>
               <Select label="Tipo de sangre" {...field} value={field.value ?? ''}>
                 {tiposSangre.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
               </Select>
+              <FormHelperText>{errors.tipoSangre?.message}</FormHelperText>
             </FormControl>
           )}
         />
-        
+
         <Controller
           name="contactoEmergencia"
           control={control}
@@ -148,19 +150,18 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
           name="relacionContactoEmergencia"
           control={control}
           render={({ field }) => (
-            <FormControl disabled={guardando}>
+            <FormControl disabled={guardando} error={!!errors.relacionContactoEmergencia}>
               <InputLabel>Relación</InputLabel>
               <Select label="Relación" {...field} value={field.value ?? ''}>
                 {relaciones.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
               </Select>
+              <FormHelperText>{errors.relacionContactoEmergencia?.message}</FormHelperText>
             </FormControl>
           )}
         />
-
-        
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', flex: 1, alignItems: 'flex-end' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', flex: 1, alignItems: 'flex-end', mt: 3 }}>
         <Button
           type="submit"
           variant="contained"
