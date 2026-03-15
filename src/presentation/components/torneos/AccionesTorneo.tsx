@@ -10,12 +10,14 @@ import { ModalSolicitudesSensei } from './ModalSolicitudesSensei'
 import { ModalSolicitudesAdmin } from './ModalSolicitudesAdmin'
 import { GenerarLlavesModal } from './GenerarLlavesModal'
 import { useLlaves } from '../../hooks/useLlaves'
+import { useInscripcion } from '../../hooks/useInscripcion'
 
-const ESTADO_LABEL: Record<string, { label: string; color: 'warning' | 'info' | 'success' | 'error' }> = {
+const ESTADO_LABEL: Record<string, { label: string; color: 'warning' | 'info' | 'success' | 'error' | 'default' }> = {
   pendiente_entrenador: { label: 'Pendiente sensei', color: 'warning' },
-  aprobado_sensei:     { label: 'Pendiente admin', color: 'info' },
-  aprobado_admin:      { label: 'Aprobado', color: 'success' },
-  rechazado:           { label: 'Rechazado', color: 'error' },
+  aprobado_entrenador:  { label: 'Aprobado por sensei', color: 'info' },
+  pendiente_pago:       { label: 'Pendiente de pago', color: 'warning' },
+  confirmado:           { label: 'Confirmado', color: 'success' },
+  cancelado:            { label: 'Cancelado', color: 'default' },
 }
 
 interface Props {
@@ -24,9 +26,10 @@ interface Props {
   judoka: Judoka | null
   inscripcionActual: Inscripcion | null
   inscripcionAbierta: boolean
+  onInscripcionCancelada: () => void
 }
 
-export function AccionesTorneo({ torneo, rol, judoka, inscripcionActual, inscripcionAbierta }: Props) {
+export function AccionesTorneo({ torneo, rol, judoka, inscripcionActual, inscripcionAbierta, onInscripcionCancelada }: Props) {
   const [modalInscripcion, setModalInscripcion] = useState(false)
   const [modalSensei, setModalSensei] = useState(false)
   const [modalAdmin, setModalAdmin] = useState(false)
@@ -38,15 +41,30 @@ export function AccionesTorneo({ torneo, rol, judoka, inscripcionActual, inscrip
     primeraTorneoCategoriaId, torneo.id, torneo.numTatamis
   )
 
+  const { cancelando, cancelar } = useInscripcion(judoka, torneo.id)
+
   if (rol === 'judoka') {
     if (inscripcionActual) {
       const estado = ESTADO_LABEL[inscripcionActual.estado]
       return (
-        <Chip
-          label={estado?.label ?? inscripcionActual.estado}
-          color={estado?.color ?? 'default'}
-          variant="outlined"
-        />
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Chip
+            label={estado?.label ?? inscripcionActual.estado}
+            color={estado?.color ?? 'default'}
+            variant="outlined"
+          />
+          {inscripcionActual.estado === 'pendiente_entrenador' && (
+            <Button
+              size="small"
+              color="error"
+              variant="outlined"
+              disabled={cancelando}
+              onClick={() => cancelar(inscripcionActual.id, inscripcionActual.estado, onInscripcionCancelada)}
+            >
+              {cancelando ? 'Cancelando...' : 'Cancelar solicitud'}
+            </Button>
+          )}
+        </Stack>
       )
     }
     if (inscripcionAbierta && judoka) {
@@ -58,6 +76,7 @@ export function AccionesTorneo({ torneo, rol, judoka, inscripcionActual, inscrip
           <ModalInscripcion
             abierto={modalInscripcion}
             onCerrar={() => setModalInscripcion(false)}
+            onExito={() => { setModalInscripcion(false); onInscripcionCancelada() }}
             judoka={judoka}
             torneoCategorias={torneo.torneoCategorias}
             torneoId={torneo.id}

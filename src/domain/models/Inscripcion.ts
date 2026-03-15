@@ -3,9 +3,10 @@ import { TorneoCategoria } from './TorneoCategoria'
 
 export type EstadoInscripcion =
   | 'pendiente_entrenador'
-  | 'aprobado_sensei'
-  | 'aprobado_admin'
-  | 'rechazado'
+  | 'aprobado_entrenador'
+  | 'pendiente_pago'
+  | 'confirmado'
+  | 'cancelado'
 
 export interface Inscripcion {
   id: string

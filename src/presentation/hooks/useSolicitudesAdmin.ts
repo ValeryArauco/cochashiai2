@@ -3,9 +3,11 @@ import { useState, useEffect } from 'react'
 import { Inscripcion } from '../../domain/models/Inscripcion'
 import { SupabaseInscripcionRepository } from '../../infrastructure/repositories/SupabaseInscripcionRepository'
 import { AprobarInscripcionAdmin } from '../../application/use-cases/inscripciones/AprobarInscripcionAdmin'
+import { ConfirmarPago } from '../../application/use-cases/inscripciones/ConfirmarPago'
 
 const repo = new SupabaseInscripcionRepository()
-const aprobarUseCase = new AprobarInscripcionAdmin(repo)
+const registrarPesoUseCase = new AprobarInscripcionAdmin(repo)
+const confirmarPagoUseCase = new ConfirmarPago(repo)
 
 export function useSolicitudesAdmin(torneoId: string) {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([])
@@ -15,7 +17,7 @@ export function useSolicitudesAdmin(torneoId: string) {
   const cargar = () => {
     if (!torneoId) return
     setCargando(true)
-    repo.listarPorTorneo(torneoId, ['aprobado_sensei', 'aprobado_admin'])
+    repo.listarPorTorneo(torneoId, ['aprobado_entrenador', 'pendiente_pago', 'confirmado'])
       .then(setInscripciones)
       .catch(e => setError(e instanceof Error ? e.message : 'Error'))
       .finally(() => setCargando(false))
@@ -23,17 +25,28 @@ export function useSolicitudesAdmin(torneoId: string) {
 
   useEffect(() => { cargar() }, [torneoId])
 
-  const aprobar = async (inscripcionId: string, pesoOficial: number) => {
+  const registrarPeso = async (inscripcionId: string, pesoOficial: number) => {
     try {
-      await aprobarUseCase.execute(inscripcionId, pesoOficial)
+      await registrarPesoUseCase.execute(inscripcionId, pesoOficial)
       setInscripciones(prev =>
         prev.map(i => i.id === inscripcionId
-          ? { ...i, estado: 'aprobado_admin' as const, pesoOficial }
+          ? { ...i, estado: 'pendiente_pago' as const, pesoOficial }
           : i
         )
       )
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error al aprobar')
+      setError(e instanceof Error ? e.message : 'Error al registrar peso')
+    }
+  }
+
+  const confirmarPago = async (inscripcionId: string) => {
+    try {
+      await confirmarPagoUseCase.execute(inscripcionId)
+      setInscripciones(prev =>
+        prev.map(i => i.id === inscripcionId ? { ...i, estado: 'confirmado' as const } : i)
+      )
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al confirmar pago')
     }
   }
 
@@ -55,5 +68,5 @@ export function useSolicitudesAdmin(torneoId: string) {
     }
   }
 
-  return { inscripciones, cargando, error, aprobar, cambiarCategoria, eliminar }
+  return { inscripciones, cargando, error, registrarPeso, confirmarPago, cambiarCategoria, eliminar }
 }

@@ -3,11 +3,14 @@ import { useState } from 'react'
 import { Judoka } from '../../domain/models/Judoka'
 import { TorneoCategoria } from '../../domain/models/TorneoCategoria'
 import { Categoria, GrupoEdad, GeneroCategoria } from '../../domain/models/Categoria'
+import { EstadoInscripcion } from '../../domain/models/Inscripcion'
 import { SupabaseInscripcionRepository } from '../../infrastructure/repositories/SupabaseInscripcionRepository'
 import { SolicitarInscripcion } from '../../application/use-cases/inscripciones/SolicitarInscripcion'
+import { CancelarInscripcion } from '../../application/use-cases/inscripciones/CancelarInscripcion'
 
 const repo = new SupabaseInscripcionRepository()
 const solicitarUseCase = new SolicitarInscripcion(repo)
+const cancelarUseCase = new CancelarInscripcion(repo)
 
 function calcularEdad(fechaNacimiento: string): number {
   const hoy = new Date()
@@ -37,15 +40,13 @@ export function categoriasElegibles(
     const cat: Categoria = tc.categoria
     if (cat.edad !== grupo) return false
     if (cat.genero !== 'mixto' && cat.genero !== generoJudoka) return false
-    if (judoka.peso !== undefined && cat.pesoMinimo !== undefined && cat.pesoMaximo !== undefined) {
-      if (judoka.peso < cat.pesoMinimo || judoka.peso > cat.pesoMaximo) return false
-    }
     return true
   })
 }
 
 export function useInscripcion(judoka: Judoka | null, torneoId: string) {
   const [enviando, setEnviando] = useState(false)
+  const [cancelando, setCancelando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
 
@@ -55,7 +56,7 @@ export function useInscripcion(judoka: Judoka | null, torneoId: string) {
     setError(null)
     setExito(false)
     try {
-      await solicitarUseCase.execute(judoka, torneoCategoriaId)
+      await solicitarUseCase.execute(judoka, torneoCategoriaId, torneoId)
       setExito(true)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error al solicitar inscripción')
@@ -64,5 +65,18 @@ export function useInscripcion(judoka: Judoka | null, torneoId: string) {
     }
   }
 
-  return { enviando, error, exito, solicitar }
+  const cancelar = async (inscripcionId: string, estadoActual: EstadoInscripcion, onCancelado: () => void) => {
+    setCancelando(true)
+    setError(null)
+    try {
+      await cancelarUseCase.execute(inscripcionId, estadoActual)
+      onCancelado()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al cancelar la inscripción')
+    } finally {
+      setCancelando(false)
+    }
+  }
+
+  return { enviando, cancelando, error, exito, solicitar, cancelar }
 }

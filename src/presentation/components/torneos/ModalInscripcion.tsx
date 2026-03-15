@@ -25,12 +25,13 @@ function camposFaltantes(judoka: Judoka): string[] {
 interface Props {
   abierto: boolean
   onCerrar: () => void
+  onExito: () => void
   judoka: Judoka
   torneoCategorias: TorneoCategoria[]
   torneoId: string
 }
 
-export function ModalInscripcion({ abierto, onCerrar, judoka, torneoCategorias, torneoId }: Props) {
+export function ModalInscripcion({ abierto, onCerrar, onExito, judoka, torneoCategorias, torneoId }: Props) {
   const [torneoCategoriaIdSeleccionada, setSeleccionada] = useState('')
   const { enviando, error, exito, solicitar } = useInscripcion(judoka, torneoId)
   const elegibles = categoriasElegibles(judoka, torneoCategorias)
@@ -61,32 +62,96 @@ export function ModalInscripcion({ abierto, onCerrar, judoka, torneoCategorias, 
             {elegibles.length === 0 ? (
               <Alert severity="warning">
                 No hay categorías disponibles para tu perfil en este torneo.
-                Tu grupo de edad, género o peso no coincide con ninguna categoría habilitada.
+                Tu grupo de edad o género no coincide con ninguna categoría habilitada.
               </Alert>
             ) : (
               <>
-                <Typography variant="body2" color="text.secondary" mb={2}>
-                  Selecciona la categoría en la que deseas participar:
+                <Box 
+                  sx={{ 
+                    mb: 3, 
+                    p: 2, 
+                    bgcolor: 'background.default', 
+                    borderRadius: 2, 
+                    border: '1px solid', 
+                    borderColor: 'divider',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5
+                  }}
+                >
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>
+                      Tu grupo habilitado
+                    </Typography>
+                    <Typography variant="body1" fontWeight={500}>
+                      {elegibles[0].categoria.edad} · {elegibles[0].categoria.genero}
+                    </Typography>
+                  </Box>
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" mb={1.5}>
+                  Selecciona tu división de peso:
                 </Typography>
-                <RadioGroup value={torneoCategoriaIdSeleccionada} onChange={e => setSeleccionada(e.target.value)}>
-                  {elegibles.map(tc => (
-                    <FormControlLabel
-                      key={tc.id}
-                      value={tc.id}
-                      control={<Radio />}
-                      label={
-                        <Box>
-                          <Typography variant="body2" fontWeight={500}>{tc.categoria.nombre}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {tc.categoria.edad} · {tc.categoria.genero}
-                            {tc.categoria.pesoMinimo !== undefined && tc.categoria.pesoMaximo !== undefined
-                              ? ` · ${tc.categoria.pesoMinimo}–${tc.categoria.pesoMaximo} kg`
-                              : ''}
+                <RadioGroup 
+                  value={torneoCategoriaIdSeleccionada} 
+                  onChange={e => setSeleccionada(e.target.value)}
+                  sx={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, 
+                    gap: 1 
+                  }}
+                >
+                  {[...elegibles]
+                    .sort((a, b) => {
+                      const pesoMinA = a.categoria.pesoMinimo ?? 0;
+                      const pesoMaxA = a.categoria.pesoMaximo ?? 999;
+                      const pesoMinB = b.categoria.pesoMinimo ?? 0;
+                      const pesoMaxB = b.categoria.pesoMaximo ?? 999;
+                      
+                      if (pesoMinA !== pesoMinB) return pesoMinA - pesoMinB;
+                      return pesoMaxA - pesoMaxB;
+                    })
+                    .map(tc => {
+                    const esSeleccionado = torneoCategoriaIdSeleccionada === tc.id
+                    const min = tc.categoria.pesoMinimo
+                    const max = tc.categoria.pesoMaximo
+                    
+                    let pesoLabel = ''
+                    if (min != null && max != null) {
+                      pesoLabel = `${min} – ${max} kg`
+                    } else if (min != null) {
+                      pesoLabel = `Más de ${min} kg`
+                    } else if (max != null) {
+                      pesoLabel = `Hasta ${max} kg`
+                    } else {
+                      pesoLabel = tc.categoria.nombre.split(' ').pop() || 'Abierto'
+                    }
+
+                    return (
+                      <FormControlLabel
+                        key={tc.id}
+                        value={tc.id}
+                        control={<Radio size="small" />}
+                        label={
+                          <Typography fontWeight={esSeleccionado ? 600 : 400}>
+                            {pesoLabel}
                           </Typography>
-                        </Box>
-                      }
-                    />
-                  ))}
+                        }
+                        sx={{
+                          m: 0,
+                          p: 1.5,
+                          border: '1px solid',
+                          borderColor: esSeleccionado ? 'primary.main' : 'divider',
+                          borderRadius: 2,
+                          bgcolor: esSeleccionado ? 'primary.50' : 'transparent',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: esSeleccionado ? 'primary.50' : 'action.hover'
+                          }
+                        }}
+                      />
+                    )
+                  })}
                 </RadioGroup>
               </>
             )}
@@ -94,7 +159,9 @@ export function ModalInscripcion({ abierto, onCerrar, judoka, torneoCategorias, 
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCerrar}>{exito ? 'Cerrar' : 'Cancelar'}</Button>
+        <Button onClick={exito ? () => { onExito(); onCerrar() } : onCerrar}>
+          {exito ? 'Cerrar' : 'Cancelar'}
+        </Button>
         {!exito && faltantes.length === 0 && elegibles.length > 0 && (
           <Button
             variant="contained"

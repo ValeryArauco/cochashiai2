@@ -34,10 +34,19 @@ export class SupabaseInscripcionRepository implements IInscripcionRepository {
   }
 
   async listarPorTorneo(torneoId: string, estadoFiltro?: EstadoInscripcion[]): Promise<Inscripcion[]> {
+    const { data: tcData } = await supabase
+      .from('torneo_categoria')
+      .select('id')
+      .eq('torneo_id', torneoId)
+
+    if (!tcData || tcData.length === 0) return []
+
+    const tcIds = tcData.map((tc: { id: string }) => tc.id)
+
     let query = supabase
       .from('inscripciones')
       .select(SELECT_COMPLETO)
-      .eq('torneo_categoria.torneo_id', torneoId)
+      .in('torneo_categoria_id', tcIds)
 
     if (estadoFiltro && estadoFiltro.length > 0) {
       query = query.in('estado', estadoFiltro)
@@ -49,46 +58,52 @@ export class SupabaseInscripcionRepository implements IInscripcionRepository {
   }
 
   async obtenerPorJudokaYTorneo(judokaId: string, torneoId: string): Promise<Inscripcion | null> {
+    const { data: tcData } = await supabase
+      .from('torneo_categoria')
+      .select('id')
+      .eq('torneo_id', torneoId)
+
+    if (!tcData || tcData.length === 0) return null
+
+    const tcIds = tcData.map((tc: { id: string }) => tc.id)
+
     const { data, error } = await supabase
       .from('inscripciones')
       .select(SELECT_COMPLETO)
       .eq('judoka_id', judokaId)
-      .eq('torneo_categoria.torneo_id', torneoId)
+      .in('torneo_categoria_id', tcIds)
+      .limit(1)
       .maybeSingle()
 
-    if (error) return null
-    if (!data) return null
+    if (error || !data) return null
     return InscripcionMapper.toDomain(data as InscripcionDTO)
   }
 
-  async aprobarSensei(inscripcionId: string, usuarioId: string): Promise<void> {
-    const { data: senseiData, error: senseiError } = await supabase
-      .from('senseis')
-      .select('id')
-      .eq('usuario_id', usuarioId)
-      .single()
-
-    if (senseiError || !senseiData) throw new Error('No se encontró el perfil del sensei')
-
+  async aprobarEntrenador(inscripcionId: string): Promise<void> {
     const { error } = await supabase
       .from('inscripciones')
-      .update({
-        estado: 'aprobado_sensei',
-        aprobado_por_sensei_id: senseiData.id,
-        fecha_aprobacion_sensei: new Date().toISOString(),
-      })
+      .update({ estado: 'aprobado_entrenador' })
       .eq('id', inscripcionId)
 
     if (error) throw new Error('No se pudo aprobar la inscripción')
   }
 
-  async aprobarAdmin(inscripcionId: string, pesoOficial: number): Promise<void> {
+  async registrarPeso(inscripcionId: string, pesoOficial: number): Promise<void> {
     const { error } = await supabase
       .from('inscripciones')
-      .update({ estado: 'aprobado_admin', peso_oficial: pesoOficial })
+      .update({ estado: 'pendiente_pago', peso_oficial: pesoOficial })
       .eq('id', inscripcionId)
 
-    if (error) throw new Error('No se pudo aprobar la inscripción')
+    if (error) throw new Error('No se pudo registrar el peso')
+  }
+
+  async confirmarPago(inscripcionId: string): Promise<void> {
+    const { error } = await supabase
+      .from('inscripciones')
+      .update({ estado: 'confirmado' })
+      .eq('id', inscripcionId)
+
+    if (error) throw new Error('No se pudo confirmar el pago')
   }
 
   async cambiarCategoria(inscripcionId: string, nuevaTorneoCategoriaId: string): Promise<void> {

@@ -4,13 +4,11 @@ import { Torneo } from '../../domain/models/Torneo'
 import { Inscripcion } from '../../domain/models/Inscripcion'
 import { SupabaseTorneoRepository } from '../../infrastructure/repositories/SupabaseTorneoRepository'
 import { SupabaseInscripcionRepository } from '../../infrastructure/repositories/SupabaseInscripcionRepository'
-import { useAuth } from '../context/AuthContext'
 
 const torneoRepo = new SupabaseTorneoRepository()
 const inscripcionRepo = new SupabaseInscripcionRepository()
 
-export function useTorneoDetalle(torneoId: string) {
-  const { usuario } = useAuth()
+export function useTorneoDetalle(torneoId: string, judokaId?: string) {
   const [torneo, setTorneo] = useState<Torneo | null>(null)
   const [inscripcionActual, setInscripcionActual] = useState<Inscripcion | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -21,7 +19,7 @@ export function useTorneoDetalle(torneoId: string) {
     setCargando(true)
     Promise.all([
       torneoRepo.obtenerPorId(torneoId),
-      usuario?.id ? inscripcionRepo.obtenerPorJudokaYTorneo(usuario.id, torneoId).catch(() => null) : Promise.resolve(null),
+      judokaId ? inscripcionRepo.obtenerPorJudokaYTorneo(judokaId, torneoId).catch(() => null) : Promise.resolve(null),
     ])
       .then(([t, i]) => {
         setTorneo(t)
@@ -29,11 +27,18 @@ export function useTorneoDetalle(torneoId: string) {
       })
       .catch(e => setError(e instanceof Error ? e.message : 'Error'))
       .finally(() => setCargando(false))
-  }, [torneoId, usuario?.id])
+  }, [torneoId, judokaId])
 
   const inscripcionAbierta = torneo
     ? new Date() <= new Date(`${torneo.fechaLimiteInscripcion}T${torneo.horaLimiteInscripcion ?? '23:59:59'}`)
     : false
 
-  return { torneo, inscripcionActual, cargando, error, inscripcionAbierta }
+  const recargarInscripcion = () => {
+    if (!judokaId || !torneoId) return
+    inscripcionRepo.obtenerPorJudokaYTorneo(judokaId, torneoId)
+      .then(setInscripcionActual)
+      .catch(() => setInscripcionActual(null))
+  }
+
+  return { torneo, inscripcionActual, cargando, error, inscripcionAbierta, recargarInscripcion }
 }

@@ -14,8 +14,11 @@ const CAMPOS_REQUERIDOS: { campo: keyof Judoka | string; etiqueta: string }[] = 
 export class SolicitarInscripcion {
   constructor(private readonly inscripcionRepo: IInscripcionRepository) {}
 
-  async execute(judoka: Judoka, torneoCategoriaId: string): Promise<Inscripcion> {
+  async execute(judoka: Judoka, torneoCategoriaId: string, torneoId: string): Promise<Inscripcion> {
     if (!torneoCategoriaId) throw new Error('La categoría es requerida')
+
+    const inscripcionExistente = await this.inscripcionRepo.obtenerPorJudokaYTorneo(judoka.id, torneoId)
+    if (inscripcionExistente) throw new Error('Ya tienes una solicitud de inscripción para este torneo')
 
     const camposFaltantes: string[] = []
 

@@ -24,7 +24,7 @@ export default function TorneoDetallePage({ params }: PageProps) {
   const router = useRouter()
   const { usuario } = useAuth()
   const { judoka } = useJudoka()
-  const { torneo, inscripcionActual, cargando, error, inscripcionAbierta } = useTorneoDetalle(id)
+  const { torneo, inscripcionActual, cargando, error, inscripcionAbierta, recargarInscripcion } = useTorneoDetalle(id, judoka?.id)
 
   const primeraTorneoCategoriaId = torneo?.torneoCategorias[0]?.id ?? ''
   const { llave, combates, cargando: cargandoLlaves, registrarResultado } = useLlaves(
@@ -85,6 +85,7 @@ export default function TorneoDetallePage({ params }: PageProps) {
             judoka={judoka}
             inscripcionActual={inscripcionActual}
             inscripcionAbierta={inscripcionAbierta}
+            onInscripcionCancelada={recargarInscripcion}
           />
         </Box>
       )}

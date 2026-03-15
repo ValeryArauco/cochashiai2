@@ -2,7 +2,7 @@
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Box, Typography, Avatar, CircularProgress,
-  TextField, Alert, Chip, Divider, IconButton, Tooltip,
+  TextField, Alert, Chip, Divider, IconButton, Tooltip, Checkbox, FormControlLabel,
 } from '@mui/material'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -17,14 +17,13 @@ interface Props {
 }
 
 export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
-  const { inscripciones, cargando, error, aprobar, eliminar } = useSolicitudesAdmin(torneoId)
+  const { inscripciones, cargando, error, registrarPeso, confirmarPago, eliminar } = useSolicitudesAdmin(torneoId)
   const [pesos, setPesos] = useState<Record<string, string>>({})
-  const [pagados, setPagados] = useState<Record<string, boolean>>({})
 
-  const handleAprobar = async (ins: Inscripcion) => {
+  const handleRegistrarPeso = async (ins: Inscripcion) => {
     const peso = parseFloat(pesos[ins.id] ?? '0')
     if (!peso || peso <= 0) return
-    await aprobar(ins.id, peso)
+    await registrarPeso(ins.id, peso)
   }
 
   const handleEliminar = async (id: string) => {
@@ -48,7 +47,9 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
             const u = ins.judoka?.usuario
             const nombreCompleto = `${u?.nombre ?? ''} ${u?.apellidoPaterno ?? ''}`.trim()
             const inicial = u?.nombre?.[0]?.toUpperCase() ?? '?'
-            const aprobado = ins.estado === 'aprobado_admin'
+            const confirmado = ins.estado === 'confirmado'
+            const pendientePago = ins.estado === 'pendiente_pago'
+            const sinPeso = ins.estado === 'aprobado_entrenador'
 
             return (
               <Box key={ins.id}>
@@ -63,9 +64,18 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
                   </Box>
 
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {aprobado ? (
-                      <Chip label="Aprobado" color="success" size="small" icon={<CheckCircleIcon />} />
-                    ) : (
+                    {confirmado ? (
+                      <Chip label="Confirmado" color="success" size="small" icon={<CheckCircleIcon />} />
+                    ) : pendientePago ? (
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            onChange={() => confirmarPago(ins.id)}
+                          />
+                        }
+                        label={<Typography variant="body2">Confirmar pago</Typography>}
+                      />
+                    ) : sinPeso ? (
                       <>
                         <TextField
                           label="Peso (kg)"
@@ -76,11 +86,11 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
                           onChange={e => setPesos(prev => ({ ...prev, [ins.id]: e.target.value }))}
                           inputProps={{ min: 0, step: 0.1 }}
                         />
-                        <Tooltip title="Aprobar">
+                        <Tooltip title="Registrar peso">
                           <span>
                             <IconButton
                               color="success"
-                              onClick={() => handleAprobar(ins)}
+                              onClick={() => handleRegistrarPeso(ins)}
                               disabled={!pesos[ins.id] || parseFloat(pesos[ins.id]) <= 0}
                             >
                               <CheckCircleIcon />
@@ -88,12 +98,14 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
                           </span>
                         </Tooltip>
                       </>
+                    ) : null}
+                    {!confirmado && (
+                      <Tooltip title="Eliminar participante">
+                        <IconButton color="error" onClick={() => handleEliminar(ins.id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     )}
-                    <Tooltip title="Eliminar participante">
-                      <IconButton color="error" onClick={() => handleEliminar(ins.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
                   </Box>
                 </Box>
                 <Divider />

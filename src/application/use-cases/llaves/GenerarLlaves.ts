@@ -27,7 +27,7 @@ export class GenerarLlaves {
   ): Promise<Llave> {
     if (!torneoCategoriaId) throw new Error('La categoría es requerida')
 
-    const inscripciones = await this.inscripcionRepo.listarPorTorneo(torneoId, ['aprobado_admin'])
+    const inscripciones = await this.inscripcionRepo.listarPorTorneo(torneoId, ['confirmado'])
     const delCategoria = inscripciones.filter(i => i.torneoCategoriaId === torneoCategoriaId)
 
     if (delCategoria.length < 2) {
