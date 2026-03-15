@@ -28,7 +28,9 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
   const [aprobadas, setAprobadas] = useState<string[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [filtroCinturon, setFiltroCinturon] = useState('')
-  const [filtroCategoria, setFiltroCategoria] = useState('')
+  const [filtroEdad, setFiltroEdad] = useState('')
+  const [filtroGenero, setFiltroGenero] = useState('')
+  const [filtroPeso, setFiltroPeso] = useState('')
 
   const pendientes = inscripciones.filter(i => i.estado === 'pendiente_entrenador')
   const resto = inscripciones.filter(i => i.estado !== 'pendiente_entrenador')
@@ -36,16 +38,38 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
   const cinturones = Array.from(new Set(
     inscripciones.map(i => i.judoka?.cinturon).filter(Boolean) as string[]
   )).sort()
-  const categorias = Array.from(new Set(
-    inscripciones.map(i => i.torneoCategoria?.categoria.nombre).filter(Boolean) as string[]
-  )).sort()
+
+  const pesoKey = (min?: number, max?: number) => `${min ?? ''}-${max ?? ''}`
+  const pesoLabel = (min?: number, max?: number) => {
+    if (min && max) return `${min} – ${max} kg`
+    if (min) return `> ${min} kg`
+    if (max) return `< ${max} kg`
+    return 'Sin límite'
+  }
+  const pesosUnicos = Array.from(
+    new Map(
+      inscripciones
+        .map(i => i.torneoCategoria?.categoria)
+        .filter(Boolean)
+        .map(c => [pesoKey(c!.pesoMinimo, c!.pesoMaximo), { min: c!.pesoMinimo, max: c!.pesoMaximo }])
+    ).entries()
+  ).sort(([a], [b]) => {
+    const aMin = Number(a.split('-')[0]) || 0
+    const bMin = Number(b.split('-')[0]) || 0
+    return aMin - bMin
+  })
 
   const filtrar = (lista: Inscripcion[]) =>
     lista.filter(i => {
       const nombre = `${i.judoka?.usuario.nombre ?? ''} ${i.judoka?.usuario.apellidoPaterno ?? ''}`.toLowerCase()
       if (busqueda && !nombre.includes(busqueda.toLowerCase())) return false
       if (filtroCinturon && i.judoka?.cinturon !== filtroCinturon) return false
-      if (filtroCategoria && i.torneoCategoria?.categoria.nombre !== filtroCategoria) return false
+      if (filtroEdad && i.torneoCategoria?.categoria.edad !== filtroEdad) return false
+      if (filtroGenero && i.torneoCategoria?.categoria.genero !== filtroGenero) return false
+      if (filtroPeso) {
+        const cat = i.torneoCategoria?.categoria
+        if (pesoKey(cat?.pesoMinimo, cat?.pesoMaximo) !== filtroPeso) return false
+      }
       return true
     })
 
@@ -77,7 +101,7 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
           ) : (
             <Box sx={{ width: 42 }} />
           )}
-          <Avatar src={u?.avatarUrl}>{inicial}</Avatar>
+          <Avatar src={u?.avatarUrl} sx={{ display: { xs: 'none', sm: 'flex' } }}>{inicial}</Avatar>
           <Box flex={1}>
             <Typography fontWeight={500}>{nombreCompleto}</Typography>
             <Typography variant="caption" color="text.secondary">
@@ -85,8 +109,19 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
               {ins.torneoCategoria?.categoria.nombre ?? '—'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'block', sm: 'none' } }}>
+              {ins.torneoCategoria?.categoria.nombre 
+                ? (() => {
+                    const parts = ins.torneoCategoria.categoria.nombre.split(' ');
+                    if (parts.length >= 3) {
+                      return `${parts[0]} ${parts[1][0]} ${parts.slice(2).join(' ')}`;
+                    }
+                    return ins.torneoCategoria.categoria.nombre;
+                  })()
+                : '—'}
             </Typography>
             {ins.estado === 'aprobado_entrenador' && (
               <Chip label="Aprobado" size="small" color="success" />
@@ -118,15 +153,23 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
       <DialogContent>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+        <Box 
+          sx={{ 
+            display: { xs: 'grid', sm: 'flex' }, 
+            gridTemplateColumns: { xs: 'repeat(6, 1fr)', sm: 'none' }, 
+            gap: 1, 
+            mb: 2, 
+            flexWrap: 'wrap' 
+          }}
+        >
           <TextField
             size="small"
             placeholder="Buscar por nombre..."
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            sx={{ flex: 1, minWidth: 160 }}
+            sx={{ flex: 1, minWidth: { sm: 160 }, gridColumn: { xs: 'span 4', sm: 'auto' } }}
           />
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small" sx={{ minWidth: { sm: 140 }, gridColumn: { xs: 'span 2', sm: 'auto' } }}>
             <InputLabel>Cinturón</InputLabel>
             <Select
               label="Cinturón"
@@ -137,15 +180,42 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
               {cinturones.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
             </Select>
           </FormControl>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Categoría</InputLabel>
+          <FormControl size="small" sx={{ minWidth: { sm: 120 }, gridColumn: { xs: 'span 2', sm: 'auto' } }}>
+            <InputLabel>Edad</InputLabel>
             <Select
-              label="Categoría"
-              value={filtroCategoria}
-              onChange={(e: SelectChangeEvent) => setFiltroCategoria(e.target.value)}
+              label="Edad"
+              value={filtroEdad}
+              onChange={(e: SelectChangeEvent) => setFiltroEdad(e.target.value)}
             >
               <MenuItem value="">Todas</MenuItem>
-              {categorias.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+              <MenuItem value="infantil">Infantil</MenuItem>
+              <MenuItem value="cadete">Cadete</MenuItem>
+              <MenuItem value="senior">Senior</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: { sm: 130 }, gridColumn: { xs: 'span 2', sm: 'auto' } }}>
+            <InputLabel>Género</InputLabel>
+            <Select
+              label="Género"
+              value={filtroGenero}
+              onChange={(e: SelectChangeEvent) => setFiltroGenero(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="masculino">Masculino</MenuItem>
+              <MenuItem value="femenino">Femenino</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: { sm: 140 }, gridColumn: { xs: 'span 2', sm: 'auto' } }}>
+            <InputLabel>Peso</InputLabel>
+            <Select
+              label="Peso"
+              value={filtroPeso}
+              onChange={(e: SelectChangeEvent) => setFiltroPeso(e.target.value)}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              {pesosUnicos.map(([key, { min, max }]) => (
+                <MenuItem key={key} value={key}>{pesoLabel(min, max)}</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Box>
