@@ -11,6 +11,7 @@ const SELECT_COMPLETO = `
     usuario_id,
     cinturon_actual,
     peso_competitivo,
+    club:clubes!club_id(id, nombre_club),
     usuario:usuarios(id, nombre, apellido_paterno, apellido_materno, correo, fecha_nacimiento, genero, avatar_url, rol)
   ),
   torneo_categoria:torneo_categoria(
@@ -91,19 +92,28 @@ export class SupabaseInscripcionRepository implements IInscripcionRepository {
   async registrarPeso(inscripcionId: string, pesoOficial: number): Promise<void> {
     const { error } = await supabase
       .from('inscripciones')
-      .update({ estado: 'pendiente_pago', peso_oficial: pesoOficial })
+      .update({ estado: 'confirmado', peso_oficial: pesoOficial })
       .eq('id', inscripcionId)
 
     if (error) throw new Error('No se pudo registrar el peso')
   }
 
-  async confirmarPago(inscripcionId: string): Promise<void> {
+  async marcarPagado(inscripcionId: string): Promise<void> {
     const { error } = await supabase
       .from('inscripciones')
-      .update({ estado: 'confirmado' })
+      .update({ pagado: true })
       .eq('id', inscripcionId)
 
-    if (error) throw new Error('No se pudo confirmar el pago')
+    if (error) throw new Error('No se pudo registrar el pago')
+  }
+
+  async desmarcarPagado(inscripcionId: string): Promise<void> {
+    const { error } = await supabase
+      .from('inscripciones')
+      .update({ pagado: false })
+      .eq('id', inscripcionId)
+
+    if (error) throw new Error('No se pudo desmarcar el pago')
   }
 
   async cambiarCategoria(inscripcionId: string, nuevaTorneoCategoriaId: string): Promise<void> {

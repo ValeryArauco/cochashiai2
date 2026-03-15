@@ -14,6 +14,8 @@ export class InscripcionMapper {
         usuarioId: dto.judoka.usuario_id,
         cinturon: dto.judoka.cinturon_actual as Judoka['cinturon'],
         peso: dto.judoka.peso_competitivo,
+        clubId: dto.judoka.club?.id,
+        clubNombre: dto.judoka.club?.nombre_club,
         usuario: UsuarioMapper.toDomain(dto.judoka.usuario as Parameters<typeof UsuarioMapper.toDomain>[0]),
       }
     }
@@ -43,6 +45,7 @@ export class InscripcionMapper {
       torneoCategoriaId: dto.torneo_categoria_id,
       judokaId: dto.judoka_id,
       pesoOficial: dto.peso_oficial,
+      pagado: dto.pagado ?? false,
       aprobadoPorSenseiId: dto.aprobado_por_sensei_id,
       fechaAprobacionSensei: dto.fecha_aprobacion_sensei,
       estado: dto.estado as EstadoInscripcion,

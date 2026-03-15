@@ -3,6 +3,7 @@ export interface InscripcionDTO {
   torneo_categoria_id: string
   judoka_id: string
   peso_oficial?: number
+  pagado?: boolean
   aprobado_por_sensei_id?: string
   fecha_aprobacion_sensei?: string
   estado: string
@@ -11,6 +12,7 @@ export interface InscripcionDTO {
     usuario_id: string
     cinturon_actual?: string
     peso_competitivo?: number
+    club?: { id: string; nombre_club: string }
     usuario: {
       id: string
       nombre: string

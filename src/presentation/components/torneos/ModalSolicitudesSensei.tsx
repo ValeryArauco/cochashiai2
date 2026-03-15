@@ -106,6 +106,7 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
             <Typography fontWeight={500}>{nombreCompleto}</Typography>
             <Typography variant="caption" color="text.secondary">
               {edad} años · {u?.genero ?? '—'} · {ins.judoka?.cinturon ?? '—'}
+              {ins.judoka?.clubNombre ? ` · ${ins.judoka.clubNombre}` : ''}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

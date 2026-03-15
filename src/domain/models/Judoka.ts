@@ -8,6 +8,7 @@ export interface Judoka {
   id: string
   usuarioId: string
   clubId?: string
+  clubNombre?: string
   entrenadorId?: string
   peso?: number
   cinturon?: Cinturon

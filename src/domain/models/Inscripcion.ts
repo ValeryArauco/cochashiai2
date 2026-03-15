@@ -13,6 +13,7 @@ export interface Inscripcion {
   torneoCategoriaId: string
   judokaId: string
   pesoOficial?: number
+  pagado?: boolean
   aprobadoPorSenseiId?: string
   fechaAprobacionSensei?: string
   estado: EstadoInscripcion

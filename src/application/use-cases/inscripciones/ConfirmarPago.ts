@@ -5,6 +5,6 @@ export class ConfirmarPago {
 
   async execute(inscripcionId: string): Promise<void> {
     if (!inscripcionId) throw new Error('El id de la inscripción es requerido')
-    await this.inscripcionRepo.confirmarPago(inscripcionId)
+    await this.inscripcionRepo.marcarPagado(inscripcionId)
   }
 }
