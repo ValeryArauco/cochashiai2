@@ -1,4 +1,4 @@
-export type RolUsuario = 'admin' | 'sensei' | 'judoka'
+export type RolUsuario = 'admin' | 'sensei' | 'judoka' | 'mesa'
 export type Genero = 'Masculino' | 'Femenino' | 'Prefiero no decir'
 
 export interface Usuario {
@@ -13,4 +13,5 @@ export interface Usuario {
   genero?: string
   avatarUrl?: string
   ci?: string
+  tatamiAsignado?: number
 }

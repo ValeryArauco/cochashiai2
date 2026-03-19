@@ -1,10 +1,12 @@
 'use client'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Typography, Stack, TextField, Divider,
-  FormControl, InputLabel, Select, MenuItem, Alert,
+  Button, Typography, Stack, Divider, Alert,
+  FormControl, InputLabel, Select, MenuItem, IconButton, Box,
 } from '@mui/material'
-import { useState } from 'react'
+import AddIcon from '@mui/icons-material/Add'
+import RemoveIcon from '@mui/icons-material/Remove'
+import { useEffect, useState } from 'react'
 import { Combate, TipoVictoria } from '../../../domain/models/Combate'
 
 interface Props {
@@ -15,57 +17,73 @@ interface Props {
 }
 
 const TIPOS_VICTORIA: { value: TipoVictoria; label: string }[] = [
-  { value: 'ippon',          label: 'Ippon' },
-  { value: 'wazari',         label: 'Wazari acumulado' },
-  { value: 'decision',       label: 'Decisión de árbitros' },
-  { value: 'descalificacion',label: 'Descalificación' },
-  { value: 'wo',             label: 'W.O.' },
+  { value: 'ippon',           label: 'Ippon' },
+  { value: 'wazari',          label: 'Waza-ari acumulado' },
+  { value: 'decision',        label: 'Decisión de árbitros' },
+  { value: 'descalificacion', label: 'Descalificación' },
+  { value: 'wo',              label: 'W.O.' },
 ]
 
 function nombreJudoka(j?: Combate['judoka1']): string {
   if (!j) return '—'
-  return `${j.usuario.nombre} ${j.usuario.apellidoPaterno ?? ''}`
+  return `${j.usuario.apellidoPaterno ?? ''} ${j.usuario.nombre}`.trim()
+}
+
+function Contador({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <Stack alignItems="center" spacing={0.25}>
+      <Typography variant="caption" color="text.secondary" fontWeight="bold">{label}</Typography>
+      <Stack direction="row" alignItems="center" spacing={0.5}>
+        <IconButton size="small" onClick={() => onChange(Math.max(0, value - 1))} sx={{ bgcolor: 'action.hover' }}>
+          <RemoveIcon fontSize="small" />
+        </IconButton>
+        <Typography variant="h6" fontWeight="bold" sx={{ minWidth: 28, textAlign: 'center' }}>{value}</Typography>
+        <IconButton size="small" onClick={() => onChange(value + 1)} sx={{ bgcolor: 'action.hover' }}>
+          <AddIcon fontSize="small" />
+        </IconButton>
+      </Stack>
+    </Stack>
+  )
 }
 
 export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar }: Props) {
-  const [j1Ippones,  setJ1Ippones]  = useState(combate.judoka1Ippones)
-  const [j1Wazaris,  setJ1Wazaris]  = useState(combate.judoka1Wazaris)
-  const [j1Shidos,   setJ1Shidos]   = useState(combate.judoka1Shidos)
-  const [j2Ippones,  setJ2Ippones]  = useState(combate.judoka2Ippones)
-  const [j2Wazaris,  setJ2Wazaris]  = useState(combate.judoka2Wazaris)
-  const [j2Shidos,   setJ2Shidos]   = useState(combate.judoka2Shidos)
-  const [ganadorId,  setGanadorId]  = useState<string>(combate.ganadorId ?? '')
+  const [j1Ippones,    setJ1Ippones]    = useState(combate.judoka1Ippones)
+  const [j1Wazaris,    setJ1Wazaris]    = useState(combate.judoka1Wazaris)
+  const [j1Shidos,     setJ1Shidos]     = useState(combate.judoka1Shidos)
+  const [j2Ippones,    setJ2Ippones]    = useState(combate.judoka2Ippones)
+  const [j2Wazaris,    setJ2Wazaris]    = useState(combate.judoka2Wazaris)
+  const [j2Shidos,     setJ2Shidos]     = useState(combate.judoka2Shidos)
+  const [ganadorId,    setGanadorId]    = useState<string>(combate.ganadorId ?? '')
   const [tipoVictoria, setTipoVictoria] = useState<TipoVictoria | ''>(combate.tipoVictoria ?? '')
-  const [guardando,  setGuardando]  = useState(false)
-  const [error,      setError]      = useState<string | null>(null)
+  const [guardando,    setGuardando]    = useState(false)
+  const [error,        setError]        = useState<string | null>(null)
 
-  const numInput = (val: number, set: (v: number) => void) => (
-    <TextField
-      type="number"
-      value={val}
-      onChange={e => set(Math.max(0, Number(e.target.value)))}
-      inputProps={{ min: 0, style: { textAlign: 'center' } }}
-      size="small"
-      sx={{ width: 70 }}
-    />
-  )
+  useEffect(() => {
+    if (j1Ippones >= 1) {
+      setGanadorId(combate.judoka1Id ?? ''); setTipoVictoria('ippon')
+    } else if (j2Ippones >= 1) {
+      setGanadorId(combate.judoka2Id ?? ''); setTipoVictoria('ippon')
+    } else if (j1Wazaris >= 2) {
+      setGanadorId(combate.judoka1Id ?? ''); setTipoVictoria('wazari')
+    } else if (j2Wazaris >= 2) {
+      setGanadorId(combate.judoka2Id ?? ''); setTipoVictoria('wazari')
+    } else if (j1Shidos >= 3) {
+      setGanadorId(combate.judoka2Id ?? ''); setTipoVictoria('descalificacion')
+    } else if (j2Shidos >= 3) {
+      setGanadorId(combate.judoka1Id ?? ''); setTipoVictoria('descalificacion')
+    }
+  }, [j1Ippones, j2Ippones, j1Wazaris, j2Wazaris, j1Shidos, j2Shidos, combate.judoka1Id, combate.judoka2Id])
 
   const handleGuardar = async () => {
-    if (!ganadorId) { setError('Selecciona un ganador'); return }
+    if (!ganadorId)    { setError('Selecciona un ganador');          return }
     if (!tipoVictoria) { setError('Selecciona el tipo de victoria'); return }
     setError(null)
     setGuardando(true)
     try {
       await onGuardar(combate.id, {
-        judoka1Ippones: j1Ippones,
-        judoka1Wazaris: j1Wazaris,
-        judoka1Shidos:  j1Shidos,
-        judoka2Ippones: j2Ippones,
-        judoka2Wazaris: j2Wazaris,
-        judoka2Shidos:  j2Shidos,
-        ganadorId,
-        tipoVictoria,
-        estado: 'finalizado',
+        judoka1Ippones: j1Ippones, judoka1Wazaris: j1Wazaris, judoka1Shidos: j1Shidos,
+        judoka2Ippones: j2Ippones, judoka2Wazaris: j2Wazaris, judoka2Shidos: j2Shidos,
+        ganadorId, tipoVictoria, estado: 'finalizado',
       })
       onCerrar()
     } catch (e: unknown) {
@@ -75,70 +93,63 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar 
     }
   }
 
+  const j1Nombre = nombreJudoka(combate.judoka1)
+  const j2Nombre = nombreJudoka(combate.judoka2)
+
   return (
-    <Dialog open={abierto} onClose={onCerrar} maxWidth="sm" fullWidth>
+    <Dialog open={abierto} onClose={onCerrar} maxWidth="md" fullWidth>
       <DialogTitle>Registrar resultado</DialogTitle>
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2 }}>
         {error && <Alert severity="error">{error}</Alert>}
 
-        {/* Scores */}
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
-          {/* Judoka 1 */}
-          <Stack alignItems="center" spacing={1} flex={1}>
-            <Typography variant="subtitle2">{nombreJudoka(combate.judoka1)}</Typography>
+        <Stack direction="row" spacing={2} alignItems="flex-start" justifyContent="space-around">
+          <Stack alignItems="center" spacing={1.5} flex={1}>
             <Stack direction="row" spacing={1} alignItems="center">
-              {numInput(j1Ippones, setJ1Ippones)}
-              <Typography variant="caption" color="text.secondary">I</Typography>
-              {numInput(j1Wazaris, setJ1Wazaris)}
-              <Typography variant="caption" color="text.secondary">W</Typography>
-              {numInput(j1Shidos, setJ1Shidos)}
-              <Typography variant="caption" color="text.secondary">S</Typography>
+              <Box sx={{ width: 22, height: 22, borderRadius: '50%', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Typography fontSize={11} fontWeight="bold" color="white">A</Typography>
+              </Box>
+              <Typography variant="subtitle2" noWrap>{j1Nombre}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1.5}>
+              <Contador label="I" value={j1Ippones} onChange={setJ1Ippones} />
+              <Contador label="W" value={j1Wazaris} onChange={setJ1Wazaris} />
+              <Contador label="S" value={j1Shidos}  onChange={setJ1Shidos} />
             </Stack>
           </Stack>
 
           <Divider orientation="vertical" flexItem />
 
-          {/* Judoka 2 */}
-          <Stack alignItems="center" spacing={1} flex={1}>
-            <Typography variant="subtitle2">{nombreJudoka(combate.judoka2)}</Typography>
+          <Stack alignItems="center" spacing={1.5} flex={1}>
             <Stack direction="row" spacing={1} alignItems="center">
-              {numInput(j2Ippones, setJ2Ippones)}
-              <Typography variant="caption" color="text.secondary">I</Typography>
-              {numInput(j2Wazaris, setJ2Wazaris)}
-              <Typography variant="caption" color="text.secondary">W</Typography>
-              {numInput(j2Shidos, setJ2Shidos)}
-              <Typography variant="caption" color="text.secondary">S</Typography>
+              <Box sx={{ width: 22, height: 22, borderRadius: '50%', bgcolor: 'error.main', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Typography fontSize={11} fontWeight="bold" color="white">R</Typography>
+              </Box>
+              <Typography variant="subtitle2" noWrap>{j2Nombre}</Typography>
+            </Stack>
+            <Stack direction="row" spacing={1.5}>
+              <Contador label="I" value={j2Ippones} onChange={setJ2Ippones} />
+              <Contador label="W" value={j2Wazaris} onChange={setJ2Wazaris} />
+              <Contador label="S" value={j2Shidos}  onChange={setJ2Shidos} />
             </Stack>
           </Stack>
         </Stack>
 
-        {/* Ganador */}
         <FormControl fullWidth size="small">
           <InputLabel>Ganador</InputLabel>
           <Select label="Ganador" value={ganadorId} onChange={e => setGanadorId(e.target.value)}>
-            {combate.judoka1Id && (
-              <MenuItem value={combate.judoka1Id}>{nombreJudoka(combate.judoka1)}</MenuItem>
-            )}
-            {combate.judoka2Id && (
-              <MenuItem value={combate.judoka2Id}>{nombreJudoka(combate.judoka2)}</MenuItem>
-            )}
+            {combate.judoka1Id && <MenuItem value={combate.judoka1Id}>{j1Nombre}</MenuItem>}
+            {combate.judoka2Id && <MenuItem value={combate.judoka2Id}>{j2Nombre}</MenuItem>}
           </Select>
         </FormControl>
 
-        {/* Tipo victoria */}
         <FormControl fullWidth size="small">
           <InputLabel>Tipo de victoria</InputLabel>
-          <Select
-            label="Tipo de victoria"
-            value={tipoVictoria}
-            onChange={e => setTipoVictoria(e.target.value as TipoVictoria)}
-          >
-            {TIPOS_VICTORIA.map(t => (
-              <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
-            ))}
+          <Select label="Tipo de victoria" value={tipoVictoria} onChange={e => setTipoVictoria(e.target.value as TipoVictoria)}>
+            {TIPOS_VICTORIA.map(t => <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>)}
           </Select>
         </FormControl>
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onCerrar} disabled={guardando}>Cancelar</Button>
         <Button variant="contained" onClick={handleGuardar} disabled={guardando}>

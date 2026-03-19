@@ -1,4 +1,4 @@
-import { Combate } from '../models/Combate'
+import { Combate, EstadoCombate } from '../models/Combate'
 import { Llave, TipoBracket } from '../models/Llave'
 
 export interface ILlaveRepository {
@@ -13,4 +13,7 @@ export interface ILlaveRepository {
   obtenerPorTorneoCategoria(torneoCategoriaId: string): Promise<Llave | null>
   listarCombatesPorLlave(llaveId: string): Promise<Combate[]>
   actualizarResultadoCombate(combateId: string, resultado: Partial<Combate>): Promise<Combate>
+  actualizarEstadoCombate(combateId: string, estado: EstadoCombate): Promise<Combate>
+  actualizarTatamiCombate(combateId: string, tatami: number): Promise<Combate>
+  listarCombatesPorTorneoYTatami(torneoId: string, tatami: number): Promise<Combate[]>
 }

@@ -123,9 +123,15 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
     setSelectedTCId('')
   }
 
-  const listaFiltrada = filtrar(inscripciones)
+  const ordenarAlfa = (lista: Inscripcion[]) =>
+    [...lista].sort((a, b) => {
+      const na = `${a.judoka?.usuario.nombre ?? ''} ${a.judoka?.usuario.apellidoPaterno ?? ''}`.toLowerCase()
+      const nb = `${b.judoka?.usuario.nombre ?? ''} ${b.judoka?.usuario.apellidoPaterno ?? ''}`.toLowerCase()
+      return na.localeCompare(nb, 'es')
+    })
 
-  // Categorías compatibles: mismo género y edad que la actual, peso dentro del rango
+  const listaFiltrada = ordenarAlfa(filtrar(inscripciones))
+
   const catActual = dialogCambio?.ins.torneoCategoria?.categoria
   const categoriasCompatibles = dialogCambio
     ? torneoCategorias.filter(tc =>
@@ -228,7 +234,6 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      {/* Chip de pesaje */}
                       {confirmado ? (
                         <Chip label="Pesaje ✓" color="info" size="small" icon={<CheckCircleIcon />} />
                       ) : sinPeso && fueraDeRango != null ? (
@@ -275,7 +280,6 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
                         </>
                       )}
 
-                      {/* Toggle de pago — siempre visible */}
                       {ins.pagado ? (
                         <Tooltip title="Deshacer pago">
                           <Chip
@@ -312,7 +316,6 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
         </DialogActions>
       </Dialog>
 
-      {/* Diálogo cambio de categoría */}
       <Dialog open={!!dialogCambio} onClose={() => setDialogCambio(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Cambiar categoría</DialogTitle>
         <DialogContent>

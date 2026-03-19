@@ -13,6 +13,7 @@ export interface CombateDTO {
   judoka2_ippones: number
   judoka2_wazaris: number
   judoka2_shidos: number
+  fase: string
   estado: string
   tipo_victoria?: string
   tatami?: number

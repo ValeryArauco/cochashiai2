@@ -36,6 +36,26 @@ export class SupabaseAuthRepository implements IAuthRepository {
     return await this.obtenerDatosUsuario(data.session.user.id)
   }
 
+  async listarUsuariosMesa(): Promise<Usuario[]> {
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('rol', 'mesa')
+      .order('nombre')
+
+    if (error) throw new Error('No se pudieron cargar los operadores de mesa')
+    return (data as UsuarioDTO[]).map(UsuarioMapper.toDomain)
+  }
+
+  async actualizarTatamiAsignado(usuarioId: string, tatami: number | null): Promise<void> {
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ tatami_asignado: tatami })
+      .eq('id', usuarioId)
+
+    if (error) throw new Error('No se pudo actualizar el tatami asignado')
+  }
+
   private async obtenerDatosUsuario(authUserId: string): Promise<Usuario> {
     const { data, error } = await supabase
       .from('usuarios')

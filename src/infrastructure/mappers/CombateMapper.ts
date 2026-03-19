@@ -1,4 +1,4 @@
-import { Combate, EstadoCombate, TipoVictoria } from '../../domain/models/Combate'
+import { Combate, EstadoCombate, FaseCombate, TipoVictoria } from '../../domain/models/Combate'
 import { Judoka } from '../../domain/models/Judoka'
 import { UsuarioMapper } from './UsuarioMapper'
 import { CombateDTO } from '../dtos/CombateDTO'
@@ -19,6 +19,7 @@ export class CombateMapper {
       llaveId: dto.llave_id,
       ronda: dto.ronda,
       posicion: dto.posicion,
+      fase: (dto.fase ?? 'principal') as FaseCombate,
       judoka1Id: dto.judoka1_id,
       judoka2Id: dto.judoka2_id,
       ganadorId: dto.ganador_id,

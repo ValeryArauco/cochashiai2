@@ -5,11 +5,18 @@ import { Combate } from '../../domain/models/Combate'
 import { SupabaseLlaveRepository } from '../../infrastructure/repositories/SupabaseLlaveRepository'
 import { SupabaseInscripcionRepository } from '../../infrastructure/repositories/SupabaseInscripcionRepository'
 import { GenerarLlaves } from '../../application/use-cases/llaves/GenerarLlaves'
+import { CinturonStrategy } from '../../application/use-cases/llaves/seeding/CinturonStrategy'
 import { useAuth } from '../context/AuthContext'
+
+export type TipoSeed = 'cinturon'
+// Cuando se agregue ranking histórico: | 'ranking'
+
+const SEED_STRATEGIES: Record<TipoSeed, () => CinturonStrategy> = {
+  cinturon: () => new CinturonStrategy(),
+}
 
 const llaveRepo = new SupabaseLlaveRepository()
 const inscripcionRepo = new SupabaseInscripcionRepository()
-const generarUseCase = new GenerarLlaves(llaveRepo, inscripcionRepo)
 
 export function useLlaves(torneoCategoriaId: string, torneoId: string, numTatamis: number) {
   const { usuario } = useAuth()
@@ -33,12 +40,14 @@ export function useLlaves(torneoCategoriaId: string, torneoId: string, numTatami
       .finally(() => setCargando(false))
   }, [torneoCategoriaId])
 
-  const generar = async (tipoBracket: TipoBracket) => {
+  const generar = async (tipoBracket: TipoBracket, tipoSeed: TipoSeed = 'cinturon') => {
     if (!usuario?.id) return
     setGenerando(true)
     setError(null)
     try {
-      const nuevaLlave = await generarUseCase.execute(
+      const strategy = SEED_STRATEGIES[tipoSeed]()
+      const useCase = new GenerarLlaves(llaveRepo, inscripcionRepo, strategy)
+      const nuevaLlave = await useCase.execute(
         torneoId, torneoCategoriaId, tipoBracket, numTatamis, usuario.id
       )
       setLlave(nuevaLlave)
@@ -53,12 +62,34 @@ export function useLlaves(torneoCategoriaId: string, torneoId: string, numTatami
 
   const registrarResultado = async (combateId: string, resultado: Partial<Combate>) => {
     try {
-      const actualizado = await llaveRepo.actualizarResultadoCombate(combateId, resultado)
-      setCombates(prev => prev.map(c => c.id === combateId ? actualizado : c))
+      await llaveRepo.actualizarResultadoCombate(combateId, resultado)
+      // Refrescar todos los combates para reflejar la cascada (ganador avanza, perdedor a repesca)
+      if (llave) {
+        const c = await llaveRepo.listarCombatesPorLlave(llave.id)
+        setCombates(c)
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error al registrar resultado')
     }
   }
 
-  return { llave, combates, cargando, generando, error, generar, registrarResultado }
+  const iniciarCombate = async (combateId: string) => {
+    try {
+      const actualizado = await llaveRepo.actualizarEstadoCombate(combateId, 'en_curso')
+      setCombates(prev => prev.map(c => c.id === combateId ? actualizado : c))
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al iniciar combate')
+    }
+  }
+
+  const reasignarTatami = async (combateId: string, tatami: number) => {
+    try {
+      const actualizado = await llaveRepo.actualizarTatamiCombate(combateId, tatami)
+      setCombates(prev => prev.map(c => c.id === combateId ? actualizado : c))
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al reasignar tatami')
+    }
+  }
+
+  return { llave, combates, cargando, generando, error, generar, registrarResultado, iniciarCombate, reasignarTatami }
 }

@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase'
 import { ILlaveRepository } from '../../domain/repositories/ILlaveRepository'
-import { Combate } from '../../domain/models/Combate'
-import { Llave, TipoBracket } from '../../domain/models/Llave'
+import { Combate, EstadoCombate } from '../../domain/models/Combate'
+import { Llave, TipoBracket, EstructuraLlave } from '../../domain/models/Llave'
 import { LlaveMapper } from '../mappers/LlaveMapper'
 import { CombateMapper } from '../mappers/CombateMapper'
 import { LlaveDTO } from '../dtos/LlaveDTO'
@@ -28,6 +28,18 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
     estructura: object,
     generadoPor: string
   ): Promise<Llave> {
+    // Eliminar llave existente (y sus combates) antes de recrear
+    const { data: llaveExistente } = await supabase
+      .from('llaves')
+      .select('id')
+      .eq('torneo_categoria_id', torneoCategoriaId)
+      .maybeSingle()
+
+    if (llaveExistente) {
+      await supabase.from('combates').delete().eq('llave_id', llaveExistente.id)
+      await supabase.from('llaves').delete().eq('id', llaveExistente.id)
+    }
+
     const { data: llaveData, error: llaveError } = await supabase
       .from('llaves')
       .insert({
@@ -40,7 +52,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
       .select('id')
       .single()
 
-    if (llaveError || !llaveData) throw new Error('No se pudo crear la llave')
+    if (llaveError || !llaveData) throw new Error(`No se pudo crear la llave: ${llaveError?.message ?? 'error desconocido'}`)
     const llaveId = llaveData.id
 
     if (combates.length > 0) {
@@ -59,6 +71,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
           judoka2_ippones: 0,
           judoka2_wazaris: 0,
           judoka2_shidos: 0,
+          fase: c.fase,
           estado: c.estado,
           tatami: c.tatami ?? null,
         })))
@@ -100,7 +113,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
   }
 
   async actualizarResultadoCombate(combateId: string, resultado: Partial<Combate>): Promise<Combate> {
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('combates')
       .update({
         ganador_id: resultado.ganadorId ?? null,
@@ -114,10 +127,157 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
         tipo_victoria: resultado.tipoVictoria ?? null,
       })
       .eq('id', combateId)
+
+    if (updateError) throw new Error('No se pudo actualizar el resultado')
+
+    // Obtener datos del combate actualizado para la cascada
+    const { data: rawData } = await supabase
+      .from('combates')
+      .select('id, llave_id, ronda, posicion, judoka1_id, judoka2_id, ganador_id, fase')
+      .eq('id', combateId)
+      .single()
+
+    if (rawData) {
+      await this.cascadear(rawData as {
+        id: string; llave_id: string; ronda: number; posicion: number
+        judoka1_id: string | null; judoka2_id: string | null
+        ganador_id: string | null; fase: string
+      })
+    }
+
+    // Retornar el combate con datos de judokas enriquecidos
+    const { data, error } = await supabase
+      .from('combates')
+      .select(SELECT_COMBATE)
+      .eq('id', combateId)
+      .single()
+
+    if (error || !data) throw new Error('No se pudo obtener el combate actualizado')
+    return CombateMapper.toDomain(data as CombateDTO)
+  }
+
+  private async cascadear(combate: {
+    id: string
+    llave_id: string
+    ronda: number
+    posicion: number
+    judoka1_id: string | null
+    judoka2_id: string | null
+    ganador_id: string | null
+    fase: string
+  }): Promise<void> {
+    const { llave_id, ronda, posicion, judoka1_id, judoka2_id, ganador_id, fase } = combate
+    if (!ganador_id) return
+
+    // Obtener estructura de la llave
+    const { data: llaveData } = await supabase
+      .from('llaves')
+      .select('estructura, num_participantes')
+      .eq('id', llave_id)
+      .single()
+
+    if (!llaveData) return
+    const est = llaveData.estructura as EstructuraLlave
+    const numTatamis = Math.max(1, est.numTatamis ?? 1)
+
+    if (fase !== 'principal') return
+
+    // Cascada principal: ganador avanza a siguiente ronda
+    const nextRonda = ronda + 1
+    if (nextRonda <= est.rondas) {
+      const nextPosicion = Math.ceil(posicion / 2)
+      const campo = posicion % 2 === 1 ? 'judoka1_id' : 'judoka2_id'
+      const tatami = ((nextPosicion - 1) % numTatamis) + 1
+
+      const { data: nextCombate } = await supabase
+        .from('combates')
+        .select('id, estado')
+        .eq('llave_id', llave_id)
+        .eq('ronda', nextRonda)
+        .eq('posicion', nextPosicion)
+        .eq('fase', 'principal')
+        .maybeSingle()
+
+      if (nextCombate && nextCombate.estado !== 'finalizado') {
+        await supabase
+          .from('combates')
+          .update({ [campo]: ganador_id, tatami })
+          .eq('id', nextCombate.id)
+      }
+    }
+
+    // Cascada repesca: perdedor de QF va a bronce
+    if (!est.repesca) return
+    if (ronda !== est.repesca.qfRonda) return
+
+    const loserId = ganador_id === judoka1_id ? judoka2_id : judoka1_id
+    if (!loserId) return
+
+    for (const bronce of est.repesca.combatesBronce) {
+      const idx = bronce.alimentadoPorQF.findIndex(
+        qf => qf.ronda === ronda && qf.posicion === posicion
+      )
+      if (idx === -1) continue
+
+      const campoRepesca = idx === 0 ? 'judoka1_id' : 'judoka2_id'
+
+      const { data: repescaCombate } = await supabase
+        .from('combates')
+        .select('id, estado')
+        .eq('llave_id', llave_id)
+        .eq('posicion', bronce.bronce)
+        .eq('fase', 'repesca')
+        .maybeSingle()
+
+      if (repescaCombate && repescaCombate.estado !== 'finalizado') {
+        await supabase
+          .from('combates')
+          .update({ [campoRepesca]: loserId })
+          .eq('id', repescaCombate.id)
+      }
+      break
+    }
+  }
+
+  async actualizarEstadoCombate(combateId: string, estado: EstadoCombate): Promise<Combate> {
+    const { data, error } = await supabase
+      .from('combates')
+      .update({ estado })
+      .eq('id', combateId)
       .select(SELECT_COMBATE)
       .single()
 
-    if (error || !data) throw new Error('No se pudo actualizar el resultado')
+    if (error || !data) throw new Error('No se pudo actualizar el estado del combate')
+    return CombateMapper.toDomain(data as CombateDTO)
+  }
+
+  async listarCombatesPorTorneoYTatami(torneoId: string, tatami: number): Promise<Combate[]> {
+    const { data, error } = await supabase
+      .from('combates')
+      .select(`
+        ${SELECT_COMBATE},
+        llaves!inner(
+          torneo_categoria!inner(torneo_id)
+        )
+      `)
+      .eq('tatami', tatami)
+      .eq('llaves.torneo_categoria.torneo_id', torneoId)
+      .order('ronda')
+      .order('posicion')
+
+    if (error) throw new Error('No se pudieron cargar los combates del tatami')
+    return (data as CombateDTO[]).map(CombateMapper.toDomain)
+  }
+
+  async actualizarTatamiCombate(combateId: string, tatami: number): Promise<Combate> {
+    const { data, error } = await supabase
+      .from('combates')
+      .update({ tatami })
+      .eq('id', combateId)
+      .select(SELECT_COMBATE)
+      .single()
+
+    if (error || !data) throw new Error('No se pudo actualizar el tatami del combate')
     return CombateMapper.toDomain(data as CombateDTO)
   }
 }

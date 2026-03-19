@@ -15,6 +15,7 @@ export class UsuarioMapper {
       rol: dto.rol as RolUsuario,
       avatarUrl: dto.avatar_url,
       ci: dto.ci,
+      tatamiAsignado: dto.tatami_asignado ?? undefined,
     }
   }
 }

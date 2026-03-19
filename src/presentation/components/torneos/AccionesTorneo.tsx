@@ -8,9 +8,10 @@ import { RolUsuario } from '../../../domain/models/Usuario'
 import { ModalInscripcion } from './ModalInscripcion'
 import { ModalSolicitudesSensei } from './ModalSolicitudesSensei'
 import { ModalSolicitudesAdmin } from './ModalSolicitudesAdmin'
-import { GenerarLlavesModal } from './GenerarLlavesModal'
-import { useLlaves } from '../../hooks/useLlaves'
+import { GenerarTodasLlavesModal } from './GenerarTodasLlavesModal'
+import { ModalGestionarMesa } from './ModalGestionarMesa'
 import { useInscripcion } from '../../hooks/useInscripcion'
+import { ResultadoCategoria, ProgresoGeneracion } from '../../hooks/useGenerarTorneo'
 
 const ESTADO_LABEL: Record<string, { label: string; color: 'warning' | 'info' | 'success' | 'error' | 'default' }> = {
   pendiente_entrenador: { label: 'Pendiente sensei', color: 'warning' },
@@ -27,21 +28,31 @@ interface Props {
   inscripcionActual: Inscripcion | null
   inscripcionAbierta: boolean
   onInscripcionCancelada: () => void
+  generarTodas: () => void
+  generandoLlaves: boolean
+  progresoLlaves: ProgresoGeneracion | null
+  resultadosLlaves: ResultadoCategoria[] | null
+  errorLlaves: string | null
+  limpiarResultadosLlaves: () => void
 }
 
-export function AccionesTorneo({ torneo, rol, judoka, inscripcionActual, inscripcionAbierta, onInscripcionCancelada }: Props) {
+export function AccionesTorneo({
+  torneo, rol, judoka, inscripcionActual, inscripcionAbierta,
+  onInscripcionCancelada,
+  generarTodas, generandoLlaves, progresoLlaves, resultadosLlaves, errorLlaves, limpiarResultadosLlaves,
+}: Props) {
   const [modalInscripcion, setModalInscripcion] = useState(false)
   const [modalSensei, setModalSensei] = useState(false)
   const [modalAdmin, setModalAdmin] = useState(false)
   const [modalLlaves, setModalLlaves] = useState(false)
-
-  const primeraTorneoCategoriaId = torneo.torneoCategorias[0]?.id ?? ''
-
-  const { generando, error: errorLlaves, generar } = useLlaves(
-    primeraTorneoCategoriaId, torneo.id, torneo.numTatamis
-  )
+  const [modalMesa, setModalMesa] = useState(false)
 
   const { cancelando, cancelar } = useInscripcion(judoka, torneo.id)
+
+  const handleCerrarLlaves = () => {
+    setModalLlaves(false)
+    limpiarResultadosLlaves()
+  }
 
   if (rol === 'judoka') {
     if (inscripcionActual) {
@@ -97,12 +108,12 @@ export function AccionesTorneo({ torneo, rol, judoka, inscripcionActual, inscrip
           abierto={modalSensei}
           onCerrar={() => setModalSensei(false)}
           torneoId={torneo.id}
+          clubId={judoka?.clubId}
         />
       </>
     )
   }
 
-  // admin
   return (
     <Stack direction="row" spacing={1} flexWrap="wrap">
       <Button variant="outlined" onClick={() => setModalAdmin(true)}>
@@ -111,17 +122,28 @@ export function AccionesTorneo({ torneo, rol, judoka, inscripcionActual, inscrip
       <Button variant="contained" color="secondary" onClick={() => setModalLlaves(true)}>
         Generar llaves
       </Button>
+      <Button variant="outlined" color="info" onClick={() => setModalMesa(true)}>
+        Gestionar mesa
+      </Button>
       <ModalSolicitudesAdmin
         abierto={modalAdmin}
         onCerrar={() => setModalAdmin(false)}
         torneoId={torneo.id}
       />
-      <GenerarLlavesModal
+      <GenerarTodasLlavesModal
         abierto={modalLlaves}
-        onCerrar={() => setModalLlaves(false)}
-        onGenerar={generar}
-        generando={generando}
+        onCerrar={handleCerrarLlaves}
+        onGenerar={generarTodas}
+        generando={generandoLlaves}
+        progreso={progresoLlaves}
+        resultados={resultadosLlaves}
         error={errorLlaves}
+        totalCategorias={torneo.torneoCategorias.length}
+      />
+      <ModalGestionarMesa
+        abierto={modalMesa}
+        onCerrar={() => setModalMesa(false)}
+        numTatamis={torneo.numTatamis}
       />
     </Stack>
   )

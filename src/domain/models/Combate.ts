@@ -2,12 +2,15 @@ import { Judoka } from './Judoka'
 
 export type EstadoCombate = 'pendiente' | 'en_curso' | 'finalizado' | 'bye'
 export type TipoVictoria = 'ippon' | 'wazari' | 'decision' | 'descalificacion' | 'wo'
+/** 'principal' = cuadro principal; 'repesca' = medallas de bronce */
+export type FaseCombate = 'principal' | 'repesca'
 
 export interface Combate {
   id: string
   llaveId: string
   ronda: number
   posicion: number
+  fase: FaseCombate
   judoka1Id?: string
   judoka2Id?: string
   ganadorId?: string

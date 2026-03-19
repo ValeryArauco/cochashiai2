@@ -21,9 +21,10 @@ interface Props {
   abierto: boolean
   onCerrar: () => void
   torneoId: string
+  clubId?: string
 }
 
-export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
+export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId, clubId }: Props) {
   const { inscripciones, cargando, guardando, error, aprobar, rechazar } = useSolicitudesSensei(torneoId)
   const [aprobadas, setAprobadas] = useState<string[]>([])
   const [busqueda, setBusqueda] = useState('')
@@ -32,11 +33,16 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
   const [filtroGenero, setFiltroGenero] = useState('')
   const [filtroPeso, setFiltroPeso] = useState('')
 
-  const pendientes = inscripciones.filter(i => i.estado === 'pendiente_entrenador')
-  const resto = inscripciones.filter(i => i.estado !== 'pendiente_entrenador')
+  
+  const delClub = clubId
+    ? inscripciones.filter(i => i.judoka?.clubId === clubId)
+    : inscripciones
+
+  const pendientes = delClub.filter(i => i.estado === 'pendiente_entrenador')
+  const resto = delClub.filter(i => i.estado !== 'pendiente_entrenador')
 
   const cinturones = Array.from(new Set(
-    inscripciones.map(i => i.judoka?.cinturon).filter(Boolean) as string[]
+    delClub.map(i => i.judoka?.cinturon).filter(Boolean) as string[]
   )).sort()
 
   const pesoKey = (min?: number, max?: number) => `${min ?? ''}-${max ?? ''}`
@@ -48,7 +54,7 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
   }
   const pesosUnicos = Array.from(
     new Map(
-      inscripciones
+      delClub
         .map(i => i.torneoCategoria?.categoria)
         .filter(Boolean)
         .map(c => [pesoKey(c!.pesoMinimo, c!.pesoMaximo), { min: c!.pesoMinimo, max: c!.pesoMaximo }])
@@ -58,6 +64,13 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
     const bMin = Number(b.split('-')[0]) || 0
     return aMin - bMin
   })
+
+  const ordenarAlfa = (lista: Inscripcion[]) =>
+    [...lista].sort((a, b) => {
+      const na = `${a.judoka?.usuario.nombre ?? ''} ${a.judoka?.usuario.apellidoPaterno ?? ''}`.toLowerCase()
+      const nb = `${b.judoka?.usuario.nombre ?? ''} ${b.judoka?.usuario.apellidoPaterno ?? ''}`.toLowerCase()
+      return na.localeCompare(nb, 'es')
+    })
 
   const filtrar = (lista: Inscripcion[]) =>
     lista.filter(i => {
@@ -146,7 +159,7 @@ export function ModalSolicitudesSensei({ abierto, onCerrar, torneoId }: Props) {
     )
   }
 
-  const todasLasFiltradas = filtrar([...pendientes, ...resto])
+  const todasLasFiltradas = ordenarAlfa(filtrar([...pendientes, ...resto]))
 
   return (
     <Dialog open={abierto} onClose={onCerrar} maxWidth="md" fullWidth>

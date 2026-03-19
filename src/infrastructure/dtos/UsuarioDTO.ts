@@ -10,4 +10,5 @@ export interface UsuarioDTO {
   rol: string
   avatar_url?: string
   ci?: string
+  tatami_asignado?: number
 }
