@@ -30,7 +30,8 @@ export async function middleware(request: NextRequest) {
 
   const esRutaProtegida =
     rutaActual.startsWith('/torneos') ||
-    rutaActual.startsWith('/perfil')
+    rutaActual.startsWith('/perfil') ||
+    rutaActual.startsWith('/reportes')
 
   const esRutaDeAuth = rutaActual.startsWith('/login')
 
@@ -50,5 +51,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/torneos/:path*', '/perfil/:path*', '/login'],
+  matcher: ['/', '/torneos/:path*', '/perfil/:path*', '/reportes/:path*', '/reportes', '/login'],
 }

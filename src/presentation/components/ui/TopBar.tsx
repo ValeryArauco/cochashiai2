@@ -1,16 +1,18 @@
 'use client'
-import { AppBar, Box, Toolbar, Typography, Avatar, Button, Menu, MenuItem, ListItemIcon, Divider } from "@mui/material";
+import { AppBar, Box, Toolbar, Typography, Avatar, Button, Menu, MenuItem, ListItemIcon, Divider, Tooltip, IconButton } from "@mui/material";
 import { useAuth } from "@/presentation/context/AuthContext";
 import { useLogin } from "@/presentation/hooks/useLogin";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
 export function TopBar() {
     const { usuario } = useAuth()
     const { logout } = useLogin()
     const router = useRouter()
+    const pathname = usePathname()
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
     const abrirMenu = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)
@@ -27,6 +29,17 @@ export function TopBar() {
     return (
         <AppBar position="sticky" color="default" elevation={0} sx={{ zIndex: 10 }}>
             <Toolbar sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                {usuario?.rol === 'admin' && (
+                    <Tooltip title="Reportes">
+                        <IconButton
+                            onClick={() => router.push('/reportes')}
+                            color={pathname === '/reportes' ? 'primary' : 'default'}
+                            sx={{ mr: 1 }}
+                        >
+                            <BarChartIcon />
+                        </IconButton>
+                    </Tooltip>
+                )}
 
                 <Button
                     color="inherit"

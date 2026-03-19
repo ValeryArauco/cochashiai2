@@ -40,3 +40,24 @@ a {
     color-scheme: light;
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  header,
+  nav {
+    display: none !important;
+  }
+
+  .print-section {
+    page-break-inside: avoid;
+  }
+
+  body {
+    font-size: 12pt;
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
