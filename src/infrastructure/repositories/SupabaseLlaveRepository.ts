@@ -239,6 +239,24 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
     }
   }
 
+  async actualizarMarcadorParcial(combateId: string, marcador: {
+    judoka1Ippones: number; judoka1Wazaris: number; judoka1Shidos: number
+    judoka2Ippones: number; judoka2Wazaris: number; judoka2Shidos: number
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('combates')
+      .update({
+        judoka1_ippones: marcador.judoka1Ippones,
+        judoka1_wazaris: marcador.judoka1Wazaris,
+        judoka1_shidos:  marcador.judoka1Shidos,
+        judoka2_ippones: marcador.judoka2Ippones,
+        judoka2_wazaris: marcador.judoka2Wazaris,
+        judoka2_shidos:  marcador.judoka2Shidos,
+      })
+      .eq('id', combateId)
+    if (error) throw new Error(`No se pudo actualizar el marcador: ${error.message}`)
+  }
+
   async actualizarEstadoCombate(combateId: string, estado: EstadoCombate): Promise<Combate> {
     const { data, error } = await supabase
       .from('combates')

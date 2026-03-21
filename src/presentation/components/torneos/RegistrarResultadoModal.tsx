@@ -6,14 +6,20 @@ import {
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Combate, TipoVictoria } from '../../../domain/models/Combate'
+
+interface Marcador {
+  judoka1Ippones: number; judoka1Wazaris: number; judoka1Shidos: number
+  judoka2Ippones: number; judoka2Wazaris: number; judoka2Shidos: number
+}
 
 interface Props {
   abierto: boolean
   onCerrar: () => void
   combate: Combate
   onGuardar: (combateId: string, resultado: Partial<Combate>) => Promise<void>
+  onMarcadorChange?: (combateId: string, marcador: Marcador) => Promise<void>
 }
 
 const TIPOS_VICTORIA: { value: TipoVictoria; label: string }[] = [
@@ -46,7 +52,7 @@ function Contador({ label, value, onChange }: { label: string; value: number; on
   )
 }
 
-export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar }: Props) {
+export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar, onMarcadorChange }: Props) {
   const [j1Ippones,    setJ1Ippones]    = useState(combate.judoka1Ippones)
   const [j1Wazaris,    setJ1Wazaris]    = useState(combate.judoka1Wazaris)
   const [j1Shidos,     setJ1Shidos]     = useState(combate.judoka1Shidos)
@@ -57,6 +63,26 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar 
   const [tipoVictoria, setTipoVictoria] = useState<TipoVictoria | ''>(combate.tipoVictoria ?? '')
   const [guardando,    setGuardando]    = useState(false)
   const [error,        setError]        = useState<string | null>(null)
+
+
+  const marcadorRef = useRef<Marcador>({
+    judoka1Ippones: j1Ippones, judoka1Wazaris: j1Wazaris, judoka1Shidos: j1Shidos,
+    judoka2Ippones: j2Ippones, judoka2Wazaris: j2Wazaris, judoka2Shidos: j2Shidos,
+  })
+  const onMarcadorChangeRef = useRef(onMarcadorChange)
+  useEffect(() => { onMarcadorChangeRef.current = onMarcadorChange }, [onMarcadorChange])
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
+
+  function actualizarScore(campo: keyof Marcador, valor: number) {
+    const nuevo = { ...marcadorRef.current, [campo]: valor }
+    marcadorRef.current = nuevo
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null
+      onMarcadorChangeRef.current?.(combate.id, marcadorRef.current)
+    }, 150)
+  }
 
   useEffect(() => {
     if (j1Ippones >= 1) {
@@ -111,9 +137,9 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar 
               <Typography variant="subtitle2" noWrap>{j1Nombre}</Typography>
             </Stack>
             <Stack direction="row" spacing={1.5}>
-              <Contador label="I" value={j1Ippones} onChange={setJ1Ippones} />
-              <Contador label="W" value={j1Wazaris} onChange={setJ1Wazaris} />
-              <Contador label="S" value={j1Shidos}  onChange={setJ1Shidos} />
+              <Contador label="I" value={j1Ippones} onChange={v => { setJ1Ippones(v); actualizarScore('judoka1Ippones', v) }} />
+              <Contador label="W" value={j1Wazaris} onChange={v => { setJ1Wazaris(v); actualizarScore('judoka1Wazaris', v) }} />
+              <Contador label="S" value={j1Shidos}  onChange={v => { setJ1Shidos(v);  actualizarScore('judoka1Shidos',  v) }} />
             </Stack>
           </Stack>
 
@@ -127,9 +153,9 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar 
               <Typography variant="subtitle2" noWrap>{j2Nombre}</Typography>
             </Stack>
             <Stack direction="row" spacing={1.5}>
-              <Contador label="I" value={j2Ippones} onChange={setJ2Ippones} />
-              <Contador label="W" value={j2Wazaris} onChange={setJ2Wazaris} />
-              <Contador label="S" value={j2Shidos}  onChange={setJ2Shidos} />
+              <Contador label="I" value={j2Ippones} onChange={v => { setJ2Ippones(v); actualizarScore('judoka2Ippones', v) }} />
+              <Contador label="W" value={j2Wazaris} onChange={v => { setJ2Wazaris(v); actualizarScore('judoka2Wazaris', v) }} />
+              <Contador label="S" value={j2Shidos}  onChange={v => { setJ2Shidos(v);  actualizarScore('judoka2Shidos',  v) }} />
             </Stack>
           </Stack>
         </Stack>

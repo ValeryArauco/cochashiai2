@@ -27,7 +27,7 @@ function etiquetaCombate(c: Combate, maxRonda: number): string {
 }
 
 export function MesaTatamiView({ torneoId, tatami, numTatamis: _numTatamis }: Props) {
-  const { combates, cargando, iniciarCombate, registrarResultado } = useMesaTatami(torneoId, tatami)
+  const { combates, cargando, iniciarCombate, registrarResultado, actualizarMarcadorParcial } = useMesaTatami(torneoId, tatami)
   const [combateSeleccionado, setCombateSeleccionado] = useState<Combate | null>(null)
 
   if (cargando) {
@@ -198,6 +198,7 @@ export function MesaTatamiView({ torneoId, tatami, numTatamis: _numTatamis }: Pr
             await registrarResultado(id, r)
             setCombateSeleccionado(null)
           }}
+          onMarcadorChange={actualizarMarcadorParcial}
         />
       )}
     </Box>

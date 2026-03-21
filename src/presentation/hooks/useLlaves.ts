@@ -9,7 +9,7 @@ import { CinturonStrategy } from '../../application/use-cases/llaves/seeding/Cin
 import { useAuth } from '../context/AuthContext'
 
 export type TipoSeed = 'cinturon'
-// Cuando se agregue ranking histórico: | 'ranking'
+
 
 const SEED_STRATEGIES: Record<TipoSeed, () => CinturonStrategy> = {
   cinturon: () => new CinturonStrategy(),
@@ -63,7 +63,6 @@ export function useLlaves(torneoCategoriaId: string, torneoId: string, numTatami
   const registrarResultado = async (combateId: string, resultado: Partial<Combate>) => {
     try {
       await llaveRepo.actualizarResultadoCombate(combateId, resultado)
-      // Refrescar todos los combates para reflejar la cascada (ganador avanza, perdedor a repesca)
       if (llave) {
         const c = await llaveRepo.listarCombatesPorLlave(llave.id)
         setCombates(c)
@@ -82,6 +81,18 @@ export function useLlaves(torneoCategoriaId: string, torneoId: string, numTatami
     }
   }
 
+  const actualizarMarcadorParcial = async (combateId: string, marcador: {
+    judoka1Ippones: number; judoka1Wazaris: number; judoka1Shidos: number
+    judoka2Ippones: number; judoka2Wazaris: number; judoka2Shidos: number
+  }) => {
+    try {
+      await llaveRepo.actualizarMarcadorParcial(combateId, marcador)
+    } catch (e) {
+      console.error('[actualizarMarcadorParcial]', e)
+      setError(e instanceof Error ? e.message : 'Error al actualizar marcador')
+    }
+  }
+
   const reasignarTatami = async (combateId: string, tatami: number) => {
     try {
       const actualizado = await llaveRepo.actualizarTatamiCombate(combateId, tatami)
@@ -91,5 +102,5 @@ export function useLlaves(torneoCategoriaId: string, torneoId: string, numTatami
     }
   }
 
-  return { llave, combates, cargando, generando, error, generar, registrarResultado, iniciarCombate, reasignarTatami }
+  return { llave, combates, cargando, generando, error, generar, registrarResultado, actualizarMarcadorParcial, iniciarCombate, reasignarTatami }
 }

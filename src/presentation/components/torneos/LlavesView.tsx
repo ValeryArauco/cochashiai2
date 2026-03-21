@@ -21,13 +21,17 @@ interface Props {
   rol: RolUsuario
   numTatamis: number
   onRegistrarResultado: (combateId: string, resultado: Partial<Combate>) => Promise<void>
+  onActualizarMarcadorParcial: (combateId: string, marcador: {
+    judoka1Ippones: number; judoka1Wazaris: number; judoka1Shidos: number
+    judoka2Ippones: number; judoka2Wazaris: number; judoka2Shidos: number
+  }) => Promise<void>
   onIniciarCombate: (combateId: string) => Promise<void>
   onReasignarTatami: (combateId: string, tatami: number) => Promise<void>
 }
 
 export function LlavesView({
   llave, combates, cargando, rol, numTatamis,
-  onRegistrarResultado, onIniciarCombate, onReasignarTatami,
+  onRegistrarResultado, onActualizarMarcadorParcial, onIniciarCombate, onReasignarTatami,
 }: Props) {
   const [vista, setVista] = useState<'cuadro' | 'tatami'>('cuadro')
   const [combateSeleccionado, setCombateSeleccionado] = useState<Combate | null>(null)
@@ -129,6 +133,7 @@ export function LlavesView({
             await onRegistrarResultado(id, r)
             setCombateSeleccionado(null)
           }}
+          onMarcadorChange={onActualizarMarcadorParcial}
         />
       )}
     </Box>
