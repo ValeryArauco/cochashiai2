@@ -1,4 +1,4 @@
-import { GenerarLlaves } from '../GenerarLlaves'
+import { GenerarLlaves, nextPow2 } from '../GenerarLlaves'
 import { ILlaveRepository } from '../../../../domain/repositories/ILlaveRepository'
 import { IInscripcionRepository } from '../../../../domain/repositories/IInscripcionRepository'
 import { Combate, EstadoCombate } from '../../../../domain/models/Combate'
@@ -6,7 +6,6 @@ import { Inscripcion } from '../../../../domain/models/Inscripcion'
 import { Cinturon } from '../../../../domain/models/Judoka'
 import { EstructuraLlave } from '../../../../domain/models/Llave'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function mkInscripcion(judokaId: string, cinturon: Cinturon, clubId: string): Inscripcion {
   return {
@@ -52,7 +51,7 @@ function mkRepos(inscripciones: Inscripcion[]): {
     actualizarEstadoCombate: jest.fn().mockResolvedValue({} as Combate),
     actualizarTatamiCombate: jest.fn().mockResolvedValue({} as Combate),
     listarCombatesPorTorneoYTatami: jest.fn().mockResolvedValue([]),
-  } as jest.Mocked<ILlaveRepository>
+  } as unknown as jest.Mocked<ILlaveRepository>
 
   const inscripcionRepo = {
     crear: jest.fn(),
@@ -79,7 +78,6 @@ async function ejecutar(
   return capturado
 }
 
-// ── Escenario 1: N=4, S=4, 0 byes, 1 bronce ─────────────────────────────────
 
 describe('N=4 — Cadete Femenino -52kg (caso mínimo)', () => {
   const inscripciones = [
@@ -134,7 +132,6 @@ describe('N=4 — Cadete Femenino -52kg (caso mínimo)', () => {
   })
 })
 
-// ── Escenario 2: N=8, S=8, 0 byes, 2 bronces ─────────────────────────────────
 
 describe('N=8 — Senior Masculino -66kg (cuadro perfecto)', () => {
   const inscripciones = [
@@ -173,13 +170,13 @@ describe('N=8 — Senior Masculino -66kg (cuadro perfecto)', () => {
     const { combates } = await ejecutar(inscripciones, 2)
     const r1 = combates.filter(c => c.ronda === 1 && c.fase === 'principal')
       .sort((a, b) => a.posicion - b.posicion)
-    // Seed 1 → slot 1 → pos 1 judoka1
+      
     const seed1Pos = r1.find(c => c.judoka1Id === 'j1' || c.judoka2Id === 'j1')?.posicion
-    // Seed 2 → slot 5 → pos 3 judoka1
+    
     const seed2Pos = r1.find(c => c.judoka1Id === 'j2' || c.judoka2Id === 'j2')?.posicion
     expect(seed1Pos).toBe(1)
     expect(seed2Pos).toBe(3)
-    // Halveas: pos 1-2 = izquierda, pos 3-4 = derecha → separados ✓
+    
     expect(seed1Pos).not.toBe(seed2Pos)
     const izquierda = [1, 2]
     const derecha = [3, 4]
@@ -205,15 +202,14 @@ describe('N=8 — Senior Masculino -66kg (cuadro perfecto)', () => {
     const { combates } = await ejecutar(inscripciones, 2)
     const r1 = combates.filter(c => c.ronda === 1 && c.fase === 'principal')
     const todos = [...r1.map(c => c.judoka1Id), ...r1.map(c => c.judoka2Id)].filter(Boolean)
-    expect(new Set(todos).size).toBe(8) // 8 judokas únicos
+    expect(new Set(todos).size).toBe(8) 
     expect(todos).toHaveLength(8)
   })
 })
 
-// ── Escenario 3: N=13, S=16, 3 byes, 2 bronces ───────────────────────────────
 
 describe('N=13 — Senior Masculino -73kg (con byes)', () => {
-  // Club IMBA tiene 4 atletas para probar separación en R1
+  
   const inscripciones = [
     mkInscripcion('j1',  'Negro',   'IMBA'),
     mkInscripcion('j2',  'Negro',   'Kazan'),
@@ -261,7 +257,7 @@ describe('N=13 — Senior Masculino -73kg (con byes)', () => {
     const { combates } = await ejecutar(inscripciones, 3)
     const byes = combates.filter(c => c.estado === 'bye')
     const byeGanadores = byes.map(b => b.ganadorId)
-    const topSeeds = ['j1', 'j2', 'j3', 'j4'] // Negro y Café
+    const topSeeds = ['j1', 'j2', 'j3', 'j4'] 
     expect(byeGanadores.every(id => topSeeds.includes(id!))).toBe(true)
   })
 
@@ -293,13 +289,12 @@ describe('N=13 — Senior Masculino -73kg (con byes)', () => {
     for (const c of r1) {
       const j1EsImba = imbaJudokas.includes(c.judoka1Id ?? '')
       const j2EsImba = imbaJudokas.includes(c.judoka2Id ?? '')
-      // Ningún combate debe tener a los dos del mismo club IMBA
+      
       expect(j1EsImba && j2EsImba).toBe(false)
     }
   })
 })
 
-// ── Escenario 4: Error con N<2 ────────────────────────────────────────────────
 
 describe('Validaciones de entrada', () => {
   test('lanza error si no hay participantes elegibles', async () => {
@@ -329,17 +324,16 @@ describe('Validaciones de entrada', () => {
   test('filtra participantes no pagados o no confirmados', async () => {
     const elegible = mkInscripcion('j1', 'Negro', 'IMBA')
     const noPagado = { ...mkInscripcion('j2', 'Café', 'Kazan'), pagado: false }
-    // listarPorTorneo con estado='confirmado' devuelve ambos, pero pagado filtra
+    
     const { llaveRepo, inscripcionRepo } = mkRepos([elegible, noPagado])
     const uc = new GenerarLlaves(llaveRepo, inscripcionRepo)
-    // Con solo 1 elegible (pagado) debe lanzar error
+    
     await expect(
       uc.execute('torneo-1', 'tc-1', 'single_elimination', 1, 'admin-1')
     ).rejects.toThrow('Se necesitan al menos 2 participantes')
   })
 })
 
-// ── Escenario extra: N=2 (mínimo absoluto) ────────────────────────────────────
 
 describe('N=2 — caso mínimo absoluto', () => {
   const inscripciones = [
@@ -347,9 +341,9 @@ describe('N=2 — caso mínimo absoluto', () => {
     mkInscripcion('j2', 'Café',  'Kazan'),
   ]
 
-  test('genera 2 combates: 1 Final + 0 bronces', async () => {
+  test('genera 1 combate: la Final directa, sin bronces', async () => {
     const { combates } = await ejecutar(inscripciones)
-    // S=2: 1 combate R1 (la Final misma) + 0 repesca
+    
     expect(combates).toHaveLength(1)
     expect(combates.filter(c => c.fase === 'repesca')).toHaveLength(0)
   })
@@ -363,7 +357,6 @@ describe('N=2 — caso mínimo absoluto', () => {
   })
 })
 
-// ── Invariantes generales ─────────────────────────────────────────────────────
 
 describe('Invariantes del algoritmo (cualquier N)', () => {
   const casos: { N: number; inscripciones: Inscripcion[] }[] = [
@@ -407,5 +400,77 @@ describe('Invariantes del algoritmo (cualquier N)', () => {
     expect(judokasEnR1).toHaveLength(inscripciones.length)
     const unicidad = new Set(judokasEnR1)
     expect(unicidad.size).toBe(inscripciones.length)
+  })
+})
+
+
+describe('nextPow2 — tamaño de cuadro para N participantes', () => {
+  test.each([
+    [2, 2],
+    [3, 4],
+    [4, 4],
+    [5, 8],
+    [8, 8],
+    [9, 16],
+    [16, 16],
+    [17, 32],
+  ])('nextPow2(%i) = %i', (n, expected) => {
+    expect(nextPow2(n)).toBe(expected)
+  })
+})
+
+
+describe('N=5 — byes para los 3 top seeds (S=8)', () => {
+  const inscripciones = [
+    mkInscripcion('j1', 'Negro',   'ClubA'),
+    mkInscripcion('j2', 'Café',    'ClubB'),
+    mkInscripcion('j3', 'Azul',    'ClubA'),
+    mkInscripcion('j4', 'Verde',   'ClubB'),
+    mkInscripcion('j5', 'Naranja', 'ClubA'),
+  ]
+
+  test('genera 9 combates en total (mismo que N=8 porque S=8)', async () => {
+    const { combates } = await ejecutar(inscripciones)
+    expect(combates).toHaveLength(9)
+  })
+
+  test('estructura: S=8, rondas=3, byes=3, 2 bronces, qfRonda=1', async () => {
+    const { estructura } = await ejecutar(inscripciones)
+    expect(estructura.slots).toBe(8)
+    expect(estructura.rondas).toBe(3)
+    expect(estructura.byes).toBe(3)
+    expect(estructura.tieneRepesca).toBe(true)
+    expect(estructura.repesca?.qfRonda).toBe(1)
+    expect(estructura.repesca?.combatesBronce).toHaveLength(2)
+  })
+
+  test('R1 tiene 3 byes y 1 combate real', async () => {
+    const { combates } = await ejecutar(inscripciones)
+    const r1 = combates.filter(c => c.ronda === 1 && c.fase === 'principal')
+    expect(r1).toHaveLength(4)
+    expect(r1.filter(c => c.estado === 'bye')).toHaveLength(3)
+    expect(r1.filter(c => c.estado === 'pendiente')).toHaveLength(1)
+  })
+
+  test('todos los byes tienen ganadorId asignado', async () => {
+    const { combates } = await ejecutar(inscripciones)
+    const byes = combates.filter(c => c.estado === 'bye')
+    expect(byes.every(b => !!b.ganadorId)).toBe(true)
+  })
+
+  test('los byes los reciben los 3 top seeds (Negro, Café, Azul)', async () => {
+    const { combates } = await ejecutar(inscripciones)
+    const byeGanadores = combates
+      .filter(c => c.estado === 'bye')
+      .map(c => c.ganadorId)
+    expect(byeGanadores.every(id => ['j1', 'j2', 'j3'].includes(id!))).toBe(true)
+  })
+
+  test('solo el combate real de R1 tiene tatami asignado', async () => {
+    const { combates } = await ejecutar(inscripciones)
+    const r1Real = combates.filter(c => c.ronda === 1 && c.estado === 'pendiente')
+    const r1Byes = combates.filter(c => c.ronda === 1 && c.estado === 'bye')
+    expect(r1Real.every(c => !!c.tatami)).toBe(true)
+    expect(r1Byes.every(c => !c.tatami)).toBe(true)
   })
 })
