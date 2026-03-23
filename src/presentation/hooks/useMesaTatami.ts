@@ -34,5 +34,16 @@ export function useMesaTatami(torneoId: string, tatami: number) {
     await cargar()
   }
 
-  return { combates, cargando, iniciarCombate, registrarResultado }
+  const actualizarMarcadorParcial = async (combateId: string, marcador: {
+    judoka1Ippones: number; judoka1Wazaris: number; judoka1Shidos: number
+    judoka2Ippones: number; judoka2Wazaris: number; judoka2Shidos: number
+  }) => {
+    try {
+      await llaveRepo.actualizarMarcadorParcial(combateId, marcador)
+    } catch (e) {
+      console.error('[actualizarMarcadorParcial]', e)
+    }
+  }
+
+  return { combates, cargando, iniciarCombate, registrarResultado, actualizarMarcadorParcial }
 }

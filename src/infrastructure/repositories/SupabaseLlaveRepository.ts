@@ -28,7 +28,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
     estructura: object,
     generadoPor: string
   ): Promise<Llave> {
-    // Eliminar llave existente (y sus combates) antes de recrear
+
     const { data: llaveExistente } = await supabase
       .from('llaves')
       .select('id')
@@ -130,7 +130,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
 
     if (updateError) throw new Error('No se pudo actualizar el resultado')
 
-    // Obtener datos del combate actualizado para la cascada
+
     const { data: rawData } = await supabase
       .from('combates')
       .select('id, llave_id, ronda, posicion, judoka1_id, judoka2_id, ganador_id, fase')
@@ -145,7 +145,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
       })
     }
 
-    // Retornar el combate con datos de judokas enriquecidos
+
     const { data, error } = await supabase
       .from('combates')
       .select(SELECT_COMBATE)
@@ -169,7 +169,6 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
     const { llave_id, ronda, posicion, judoka1_id, judoka2_id, ganador_id, fase } = combate
     if (!ganador_id) return
 
-    // Obtener estructura de la llave
     const { data: llaveData } = await supabase
       .from('llaves')
       .select('estructura, num_participantes')
@@ -182,7 +181,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
 
     if (fase !== 'principal') return
 
-    // Cascada principal: ganador avanza a siguiente ronda
+
     const nextRonda = ronda + 1
     if (nextRonda <= est.rondas) {
       const nextPosicion = Math.ceil(posicion / 2)
@@ -206,7 +205,7 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
       }
     }
 
-    // Cascada repesca: perdedor de QF va a bronce
+
     if (!est.repesca) return
     if (ronda !== est.repesca.qfRonda) return
 
