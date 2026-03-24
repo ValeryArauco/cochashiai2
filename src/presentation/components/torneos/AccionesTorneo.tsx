@@ -125,6 +125,15 @@ export function AccionesTorneo({
       <Button variant="outlined" color="info" onClick={() => setModalMesa(true)}>
         Gestionar mesa
       </Button>
+      <Button
+        variant="outlined"
+        color="success"
+        href={`/tablero/${torneo.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Ver Tablero
+      </Button>
       <ModalSolicitudesAdmin
         abierto={modalAdmin}
         onCerrar={() => setModalAdmin(false)}

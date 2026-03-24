@@ -18,6 +18,7 @@ export function useJudoka() {
     if (!usuario?.id) return
     repo.obtenerPorUsuarioId(usuario.id)
       .then(setJudoka)
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Error al cargar el perfil'))
       .finally(() => setCargando(false))
   }, [usuario?.id])
 

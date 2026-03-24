@@ -1,4 +1,5 @@
 'use client'
+import Image from "next/image";
 import { AppBar, Box, Toolbar, Typography, Avatar, Button, Menu, MenuItem, ListItemIcon, Divider, Tooltip, IconButton } from "@mui/material";
 import { useAuth } from "@/presentation/context/AuthContext";
 import { useLogin } from "@/presentation/hooks/useLogin";
@@ -7,6 +8,7 @@ import { useState } from "react";
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import SportsKabaddiIcon from '@mui/icons-material/SportsKabaddi';
 
 export function TopBar() {
     const { usuario } = useAuth()
@@ -28,17 +30,29 @@ export function TopBar() {
     }
     return (
         <AppBar position="sticky" color="default" elevation={0} sx={{ zIndex: 10 }}>
-            <Toolbar sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Image src="/logo.svg" alt="Logo" width={100} height={100} priority />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 {usuario?.rol === 'admin' && (
-                    <Tooltip title="Reportes">
+                    <><Tooltip title="Torneos">
                         <IconButton
-                            onClick={() => router.push('/reportes')}
-                            color={pathname === '/reportes' ? 'primary' : 'default'}
+                            onClick={() => router.push('/torneos')}
+                            color={pathname === '/torneos' ? 'primary' : 'default'}
                             sx={{ mr: 1 }}
                         >
-                            <BarChartIcon />
+                            <SportsKabaddiIcon />
                         </IconButton>
-                    </Tooltip>
+                    </Tooltip><Tooltip title="Reportes">
+                            <IconButton
+                                onClick={() => router.push('/reportes')}
+                                color={pathname === '/reportes' ? 'primary' : 'default'}
+                                sx={{ mr: 1 }}
+                            >
+                                <BarChartIcon />
+                            </IconButton>
+                        </Tooltip></>
                 )}
 
                 <Button
@@ -73,7 +87,7 @@ export function TopBar() {
                     </MenuItem>
 
                 </Menu>
-
+                </Box>
             </Toolbar>
         </AppBar>
     )

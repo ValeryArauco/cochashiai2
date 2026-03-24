@@ -70,10 +70,9 @@ export class SupabaseTorneoRepository implements ITorneoRepository {
       .insert({
         nombre: datos.nombre,
         fecha_limite_inscripcion: datos.fechaLimiteInscripcion,
-        hora_limite_inscripcion: datos.horaLimiteInscripcion,
+        hora_limite_inscripcion: datos.horaLimiteInscripcion || null,
         ubicacion: datos.ubicacion,
         num_tatamis: datos.numTatamis,
-        organizado_por: datos.organizadoPor,
         activo: true,
       })
       .select('id')
@@ -89,8 +88,8 @@ export class SupabaseTorneoRepository implements ITorneoRepository {
           torneo_id: torneoId,
           fecha: f.fecha,
           hora_inicio: f.horaInicio,
-          hora_fin: f.horaFin,
-          descripcion: f.descripcion,
+          hora_fin: f.horaFin || null,
+          descripcion: f.descripcion || null,
         })))
 
       if (fechasError) throw new Error('No se pudieron guardar las fechas del torneo')
