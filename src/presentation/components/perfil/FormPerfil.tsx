@@ -71,7 +71,7 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
               value={field.value ?? ''}
               error={!!errors.fechaNacimiento}
               helperText={errors.fechaNacimiento?.message}
-              disabled={guardando}
+              disabled={true}
             />
           )}
         />
@@ -97,7 +97,7 @@ export function FormPerfil({ judoka, guardando, error, exito, onGuardar }: Props
           name="genero"
           control={control}
           render={({ field }) => (
-            <FormControl disabled={guardando} error={!!errors.genero}>
+            <FormControl disabled={true} error={!!errors.genero}>
               <InputLabel>Género</InputLabel>
               <Select label="Género" {...field} value={field.value ?? ''}>
                 {generos.map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}

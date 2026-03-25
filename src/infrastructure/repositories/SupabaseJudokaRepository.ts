@@ -35,33 +35,33 @@ export class SupabaseJudokaRepository implements IJudokaRepository {
 
 
   async actualizar(id: string, datos: Partial<Judoka>): Promise<Judoka> {
-  
+
     if (datos.usuario) {
       const { error: errorUsuario } = await supabase
         .from('usuarios')
         .update({
-          fecha_nacimiento: datos.usuario.fechaNacimiento,
-          numero_celular: datos.usuario.celular,
+          fecha_nacimiento: datos.usuario.fechaNacimiento || null,
+          numero_celular: datos.usuario.celular || null,
           genero: datos.usuario.genero,
         })
         .eq('id', datos.usuario.id)
 
-      if (errorUsuario) throw new Error('No se pudo actualizar el usuario')
+      if (errorUsuario) throw new Error(`No se pudo actualizar el usuario: ${errorUsuario.message}`)
     }
 
     const { data, error } = await supabase
       .from('judokas')
       .update({
-        contacto_emergencia: datos.contactoEmergencia,
-        relacion_contacto: datos.relacionContacto,
-        tipo_sangre: datos.tipoSangre,
+        contacto_emergencia: datos.contactoEmergencia || null,
+        relacion_contacto: datos.relacionContacto || null,
+        tipo_sangre: datos.tipoSangre || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
       .select(this.SELECT)
       .single()
 
-    if (error || !data) throw new Error('No se pudo actualizar el judoka')
+    if (error || !data) throw new Error(`No se pudo actualizar el judoka: ${error?.message ?? 'sin datos'}`)
     return JudokaMapper.toDomain(data as JudokaDTO)
   }
 
