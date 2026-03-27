@@ -30,7 +30,7 @@ export class SupabaseInscripcionRepository implements IInscripcionRepository {
       .select(SELECT_COMPLETO)
       .single()
 
-    if (error || !data) throw new Error('No se pudo crear la inscripción')
+    if (error || !data) throw new Error(`No se pudo crear la inscripción: ${error?.message ?? 'sin datos'}`)
     return InscripcionMapper.toDomain(data as InscripcionDTO)
   }
 
