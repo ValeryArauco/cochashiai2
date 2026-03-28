@@ -4,6 +4,7 @@ import type {
     CategoriaCompetida,
     DistribucionVictorias,
     EstadisticasJudoka,
+    InscritosPorTorneo,
     JudokaOpcion,
     MedalleroClub,
     WinRatePorTorneo,
@@ -39,7 +40,7 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
     }
 
     async obtenerEstadisticasJudoka(judokaId: string): Promise<EstadisticasJudoka | null> {
-        // Fetch judoka info
+       
         const { data: judokaData } = await supabase
             .from('judokas')
             .select(`
@@ -58,7 +59,6 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
             club: { nombre_club: string } | null
         }
 
-        // Fetch all finalized combates for this judoka
         const { data: combates } = await supabase
             .from('combates')
             .select(`
@@ -112,7 +112,6 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
         const totalVictorias = victorias.length
         const winRateGlobal = totalCombates > 0 ? Math.round((totalVictorias / totalCombates) * 100) : 0
 
-        // Victory type distribution
         const tiposCount: Record<string, number> = {}
         for (const c of victorias) {
             const tipo = c.tipo_victoria ?? 'decision'
@@ -124,7 +123,6 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
             porcentaje: totalVictorias > 0 ? Math.round((cantidad / totalVictorias) * 100) : 0,
         }))
 
-        // Group by torneo
         const porTorneo: Record<string, { nombre: string; fecha: string; victorias: number; derrotas: number }> = {}
         for (const c of rows) {
             const torneo = c.llave?.torneo_categoria?.torneo
@@ -207,7 +205,7 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
     }
 
     async obtenerMedalleroClubs(): Promise<MedalleroClub[]> {
-        // Fetch all clubs
+        
         const { data: clubes } = await supabase
             .from('clubes')
             .select('id, nombre_club, provincia')
@@ -215,7 +213,6 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
 
         if (!clubes) return []
 
-        // Fetch confirmed inscriptions with club info for total inscribed count
         const { data: inscripciones } = await supabase
             .from('inscripciones')
             .select(`
@@ -234,7 +231,6 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
             inscritosPorClub[clubId] = (inscritosPorClub[clubId] ?? 0) + 1
         }
 
-        // Fetch finalized combates with full bracket info to compute medals
         const { data: combates } = await supabase
             .from('combates')
             .select(`
@@ -266,7 +262,6 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
 
         const combRows = (combates ?? []) as unknown as CombateClub[]
 
-        // Group combates by llave to find max ronda per llave+fase
         const llaveMaxRonda: Record<string, Record<string, number>> = {}
         for (const c of combRows) {
             if (!llaveMaxRonda[c.llave_id]) llaveMaxRonda[c.llave_id] = {}
@@ -286,7 +281,7 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
             const maxRonda = llaveMaxRonda[c.llave_id]?.[fase] ?? 0
 
             if (fase === 'principal' && c.ronda === maxRonda) {
-                // Final: winner = gold, loser = silver
+                
                 const ganadorClub = c.ganador_id === c.judoka1_id ? c.judoka1?.club_id : c.judoka2?.club_id
                 const perdedorId = c.ganador_id === c.judoka1_id ? c.judoka2_id : c.judoka1_id
                 const perdedorClub = perdedorId === c.judoka1_id ? c.judoka1?.club_id : c.judoka2?.club_id
@@ -294,7 +289,7 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
                 if (ganadorClub) orosPorClub[ganadorClub] = (orosPorClub[ganadorClub] ?? 0) + 1
                 if (perdedorClub) platasPorClub[perdedorClub] = (platasPorClub[perdedorClub] ?? 0) + 1
             } else if (fase === 'repesca' && c.ronda === maxRonda) {
-                // Bronze match: winner = bronze
+                
                 const ganadorClub = c.ganador_id === c.judoka1_id ? c.judoka1?.club_id : c.judoka2?.club_id
                 if (ganadorClub) broncesPorClub[ganadorClub] = (broncesPorClub[ganadorClub] ?? 0) + 1
             }
@@ -320,5 +315,49 @@ export class SupabaseAnalyticsRepository implements IAnalyticsRepository {
                 eficiencia,
             }
         }).sort((a, b) => b.totalMedallas - a.totalMedallas)
+    }
+
+    async obtenerInscritosPorTorneo(): Promise<InscritosPorTorneo[]> {
+        const { data, error } = await supabase
+            .from('torneos')
+            .select(`
+                id,
+                nombre,
+                fecha_limite_inscripcion,
+                torneos_fechas(fecha),
+                torneo_categoria(
+                    inscripciones(id, estado)
+                )
+            `)
+            .eq('activo', true)
+
+        if (error || !data) return []
+
+        type TorneoRaw = {
+            id: string
+            nombre: string
+            fecha_limite_inscripcion: string
+            torneos_fechas: { fecha: string }[]
+            torneo_categoria: { inscripciones: { id: string; estado: string }[] }[]
+        }
+
+        return (data as unknown as TorneoRaw[])
+            .map(t => {
+                const fechas = (t.torneos_fechas ?? []).map(f => f.fecha).filter(Boolean).sort()
+                const fechaInicio = fechas[0] ?? t.fecha_limite_inscripcion
+                const date = new Date(fechaInicio)
+                const totalInscritos = (t.torneo_categoria ?? [])
+                    .flatMap(tc => tc.inscripciones ?? [])
+                    .filter(i => i.estado === 'confirmado').length
+                return {
+                    torneoId: t.id,
+                    torneoNombre: t.nombre,
+                    fechaInicio,
+                    anio: date.getFullYear(),
+                    mes: date.getMonth() + 1,
+                    totalInscritos,
+                }
+            })
+            .sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio))
     }
 }

@@ -57,20 +57,21 @@ export function AnaliticaCategorias({ categorias, cargando }: Props) {
                         yAxis={[{
                             data: topCategorias.map(c => c.categoriaNombre),
                             scaleType: 'band',
+                            colorMap: {
+                                type: 'ordinal',
+                                colors: topCategorias.map(c => COLOR_EDAD[c.edad] ?? '#1565c0')
+                            }
                         }]}
                         series={[{
                             data: topCategorias.map(c => c.totalInscritos),
                             label: 'Atletas inscritos',
-                            color: '#1565c0',
                             valueFormatter: (v: number | null) => `${v ?? 0} atletas`,
                         }]}
                         xAxis={[{ label: 'Cantidad de atletas confirmados' }]}
                         height={Math.max(300, topCategorias.length * 36)}
                         margin={{ left: 180, right: 40 }}
-                        colors={topCategorias.map(c => COLOR_EDAD[c.edad] ?? '#1565c0')}
                     />
 
-                    {/* Legend */}
                     <Box sx={{ display: 'flex', gap: 3, mt: 2, flexWrap: 'wrap' }}>
                         {Object.entries(COLOR_EDAD).map(([edad, color]) => (
                             <Box key={edad} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

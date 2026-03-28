@@ -48,3 +48,12 @@ export interface JudokaOpcion {
     nombre: string
     clubNombre: string
 }
+
+export interface InscritosPorTorneo {
+    torneoId: string
+    torneoNombre: string
+    fechaInicio: string
+    anio: number
+    mes: number
+    totalInscritos: number
+}

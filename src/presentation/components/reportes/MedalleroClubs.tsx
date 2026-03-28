@@ -69,8 +69,6 @@ export function MedalleroClubs({ medallero, cargando }: Props) {
                             </TableBody>
                         </Table>
                     </TableContainer>
-
-                    {/* Scatter plot: efficiency index */}
                     {conDatos.length >= 2 && (
                         <Paper sx={{ p: 3 }} className="print-section">
                             <Typography variant="subtitle1" fontWeight={600} gutterBottom>

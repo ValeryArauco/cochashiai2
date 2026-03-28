@@ -11,12 +11,14 @@ import {
 } from '@mui/material'
 import BarChartIcon from '@mui/icons-material/BarChart'
 import CategoryIcon from '@mui/icons-material/Category'
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import GroupsIcon from '@mui/icons-material/Groups'
 import PersonIcon from '@mui/icons-material/Person'
 import { useAuth } from '@/presentation/context/AuthContext'
 import { useAnalytics } from '@/presentation/hooks/useAnalytics'
 import { EstadisticasAtleta } from '@/presentation/components/reportes/EstadisticasAtleta'
 import { AnaliticaCategorias } from '@/presentation/components/reportes/AnaliticaCategorias'
+import { AnaliticaTorneos } from '@/presentation/components/reportes/AnaliticaTorneos'
 import { MedalleroClubs } from '@/presentation/components/reportes/MedalleroClubs'
 import { ExportarReporte } from '@/presentation/components/reportes/ExportarReporte'
 
@@ -30,22 +32,23 @@ export default function ReportesPage() {
         estadisticasJudoka,
         categorias,
         medallero,
+        inscritosPorTorneo,
         cargandoJudokas,
         cargandoAtleta,
         cargandoGlobal,
+        cargandoTorneos,
         error,
         cargarDatosGlobales,
         cargarEstadisticasJudoka,
+        cargarDatosTorneos,
     } = useAnalytics()
 
-    // Role guard
     useEffect(() => {
         if (!cargandoAuth && usuario?.rol !== 'admin') {
             router.replace('/torneos')
         }
     }, [cargandoAuth, usuario, router])
 
-    // Load global data when switching to relevant tabs
     useEffect(() => {
         if (tabActual === 1 || tabActual === 2) {
             if (categorias.length === 0 && medallero.length === 0) {
@@ -54,11 +57,16 @@ export default function ReportesPage() {
         }
     }, [tabActual, categorias.length, medallero.length, cargarDatosGlobales])
 
+    useEffect(() => {
+        if (tabActual === 3 && inscritosPorTorneo.length === 0) {
+            cargarDatosTorneos()
+        }
+    }, [tabActual, inscritosPorTorneo.length, cargarDatosTorneos])
+
     if (cargandoAuth || usuario?.rol !== 'admin') return null
 
     return (
-        <Container maxWidth="xl" sx={{ py: 4 }}>
-            {/* Header */}
+        <Container sx={{ py: 4, maxWidth: 1100 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <BarChartIcon color="primary" sx={{ fontSize: 32 }} />
@@ -87,6 +95,7 @@ export default function ReportesPage() {
                 <Tab icon={<PersonIcon />} iconPosition="start" label="Atletas" />
                 <Tab icon={<CategoryIcon />} iconPosition="start" label="Categorías" />
                 <Tab icon={<GroupsIcon />} iconPosition="start" label="Clubes" />
+                <Tab icon={<EmojiEventsIcon />} iconPosition="start" label="Torneos" />
             </Tabs>
 
             {tabActual === 0 && (
@@ -110,6 +119,13 @@ export default function ReportesPage() {
                 <MedalleroClubs
                     medallero={medallero}
                     cargando={cargandoGlobal}
+                />
+            )}
+
+            {tabActual === 3 && (
+                <AnaliticaTorneos
+                    datos={inscritosPorTorneo}
+                    cargando={cargandoTorneos}
                 />
             )}
         </Container>

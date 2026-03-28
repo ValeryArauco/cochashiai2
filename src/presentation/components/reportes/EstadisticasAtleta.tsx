@@ -68,7 +68,7 @@ export function EstadisticasAtleta({ judokas, estadisticas, cargandoJudokas, car
 
             {!cargandoAtleta && estadisticas && (
                 <>
-                    {/* Summary chips */}
+                
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
                         <Typography variant="h6" sx={{ mr: 1 }}>
                             {estadisticas.nombre}
@@ -95,7 +95,6 @@ export function EstadisticasAtleta({ judokas, estadisticas, cargandoJudokas, car
                     </Box>
 
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                        {/* Victory distribution donut */}
                         <Paper sx={{ p: 3, flex: '1 1 320px', minWidth: 280 }} className="print-section">
                             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                                 Distribución de Victorias
@@ -123,7 +122,6 @@ export function EstadisticasAtleta({ judokas, estadisticas, cargandoJudokas, car
                             )}
                         </Paper>
 
-                        {/* Win rate evolution line chart */}
                         <Paper sx={{ p: 3, flex: '2 1 400px', minWidth: 300 }} className="print-section">
                             <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                                 Evolución del Win Rate por Torneo

@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { SupabaseAnalyticsRepository } from '@/infrastructure/repositories/SupabaseAnalyticsRepository'
-import type { CategoriaCompetida, EstadisticasJudoka, JudokaOpcion, MedalleroClub } from '@/domain/models/Analytics'
+import type { CategoriaCompetida, EstadisticasJudoka, InscritosPorTorneo, JudokaOpcion, MedalleroClub } from '@/domain/models/Analytics'
 
 const repo = new SupabaseAnalyticsRepository()
 
@@ -10,9 +10,11 @@ export function useAnalytics() {
     const [estadisticasJudoka, setEstadisticasJudoka] = useState<EstadisticasJudoka | null>(null)
     const [categorias, setCategorias] = useState<CategoriaCompetida[]>([])
     const [medallero, setMedallero] = useState<MedalleroClub[]>([])
+    const [inscritosPorTorneo, setInscritosPorTorneo] = useState<InscritosPorTorneo[]>([])
     const [cargandoJudokas, setCargandoJudokas] = useState(false)
     const [cargandoAtleta, setCargandoAtleta] = useState(false)
     const [cargandoGlobal, setCargandoGlobal] = useState(false)
+    const [cargandoTorneos, setCargandoTorneos] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
@@ -40,6 +42,18 @@ export function useAnalytics() {
         }
     }, [])
 
+    const cargarDatosTorneos = useCallback(async () => {
+        setCargandoTorneos(true)
+        setError(null)
+        try {
+            setInscritosPorTorneo(await repo.obtenerInscritosPorTorneo())
+        } catch {
+            setError('Error al cargar datos de torneos')
+        } finally {
+            setCargandoTorneos(false)
+        }
+    }, [])
+
     const cargarEstadisticasJudoka = useCallback(async (judokaId: string) => {
         setCargandoAtleta(true)
         setError(null)
@@ -59,11 +73,14 @@ export function useAnalytics() {
         estadisticasJudoka,
         categorias,
         medallero,
+        inscritosPorTorneo,
         cargandoJudokas,
         cargandoAtleta,
         cargandoGlobal,
+        cargandoTorneos,
         error,
         cargarDatosGlobales,
         cargarEstadisticasJudoka,
+        cargarDatosTorneos,
     }
 }
