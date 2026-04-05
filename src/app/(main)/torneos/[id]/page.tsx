@@ -33,12 +33,12 @@ export default function TorneoDetallePage({ params }: PageProps) {
   const { torneo, inscripcionActual, cargando, error, inscripcionAbierta, recargarInscripcion } = useTorneoDetalle(id, judoka?.id)
 
   const [torneoCategoriaId, setTorneoCategoriaId] = useState<string>('')
-  // Caer en la primera categoría si no hay selección manual
+  
   const tcId = torneoCategoriaId || torneo?.torneoCategorias[0]?.id || ''
 
   const {
     llave, combates, cargando: cargandoLlaves,
-    registrarResultado, iniciarCombate, reasignarTatami,
+    registrarResultado, actualizarMarcadorParcial, iniciarCombate, reasignarTatami,
   } = useLlaves(tcId, id, torneo?.numTatamis ?? 1)
 
   const {
@@ -70,7 +70,6 @@ export default function TorneoDetallePage({ params }: PageProps) {
     )
   }
 
-  // Vista Mesa: pantalla dedicada al operador de tatami
   if (usuario?.rol === 'mesa') {
     return (
       <Box sx={{ p: { xs: 1, md: 2 }, maxWidth: 800, mx: 'auto' }}>
@@ -132,7 +131,6 @@ export default function TorneoDetallePage({ params }: PageProps) {
 
       <Divider sx={{ my: 3 }} />
 
-      {/* Selector de categoría para las llaves */}
       {torneo.torneoCategorias.length > 1 && (
         <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
@@ -162,6 +160,7 @@ export default function TorneoDetallePage({ params }: PageProps) {
         rol={usuario?.rol ?? 'judoka'}
         numTatamis={torneo.numTatamis}
         onRegistrarResultado={registrarResultado}
+        onActualizarMarcadorParcial={actualizarMarcadorParcial}
         onIniciarCombate={iniciarCombate}
         onReasignarTatami={reasignarTatami}
       />
