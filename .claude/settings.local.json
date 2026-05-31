@@ -7,7 +7,16 @@
       "Bash(find \"/c/Users/LENOVO CORE/Downloads/CochaShiai3/src/app/\\(main\\)/reportes\" -type f)",
       "Bash(find '/c/Users/LENOVO CORE/Downloads/CochaShiai3' -path */supabase/snippets/*.sql -type f)",
       "Bash(xargs wc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(find 'c:\\\\Users\\\\LENOVO CORE\\\\Downloads\\\\CochaShiai3' -name .env*)",
+      "Bash(npx playwright:*)",
+      "Bash(npx jest:*)",
+      "Bash(node -e \"const z = require\\(''./node_modules/zod''\\); const s = z.string\\(\\).min\\(1, ''test''\\); const r = s.safeParse\\(''''\\); console.log\\(JSON.stringify\\(r.error?.issues\\)\\)\" 2)",
+      "Bash(1 \"c:\\\\Users\\\\LENOVO CORE\\\\Downloads\\\\CochaShiai3\")",
+      "Bash(node -e \"const { z } = require\\(''./node_modules/zod''\\); const s = z.string\\(\\).min\\(1, ''test msg''\\); const r = s.safeParse\\(''''\\); console.log\\(JSON.stringify\\(r.error?.issues\\)\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\LENOVO CORE\\\\Downloads\\\\CochaShiai3\" -Recurse -Directory)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\LENOVO CORE\\\\Downloads\\\\CochaShiai3\\\\src\\\\presentation\\\\components\\\\tablero\" -File)"
     ]
   }
 }

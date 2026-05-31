@@ -78,6 +78,22 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
 
       if (combatesError) throw new Error('No se pudieron crear los combates')
     }
+    const { data: byeCombates } = await supabase
+      .from('combates')
+      .select('id, llave_id, ronda, posicion, judoka1_id, judoka2_id, ganador_id, fase')
+      .eq('llave_id', llaveId)
+      .eq('estado', 'bye')
+      .not('ganador_id', 'is', null)
+
+    if (byeCombates) {
+      for (const bye of byeCombates as {
+        id: string; llave_id: string; ronda: number; posicion: number
+        judoka1_id: string | null; judoka2_id: string | null
+        ganador_id: string | null; fase: string
+      }[]) {
+        await this.cascadear(bye)
+      }
+    }
 
     const { data, error } = await supabase
       .from('llaves')

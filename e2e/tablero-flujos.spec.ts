@@ -34,7 +34,7 @@ test.describe.serial('Flujo 1 — El tablero es accesible públicamente', () => 
     const torneoId = await obtenerTorneoId(page)
     await page.goto(`/tablero/${torneoId}`)
 
-    await expect(page.locator('h5')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Torneo de Prueba – Generación de Llaves')).toBeVisible({ timeout: 10_000 })
   })
 
   test('el encabezado muestra el indicador "EN VIVO"', async ({ page }) => {

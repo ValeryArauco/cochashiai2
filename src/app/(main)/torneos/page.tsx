@@ -106,7 +106,7 @@ export default function TorneosPage() {
         <DialogTitle>¿Eliminar torneo?</DialogTitle>
         <DialogContent>
           <Typography>
-            &ldquo;{torneoEliminar?.nombre}&rdquo; dejará de ser visible para todos los usuarios.
+            &ldquo;{torneoEliminar?.nombre}&rdquo; se eliminará permanentemente.
           </Typography>
           {errorEliminar && <Alert severity="error" sx={{ mt: 2 }}>{errorEliminar}</Alert>}
         </DialogContent>
