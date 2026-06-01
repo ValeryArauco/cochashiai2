@@ -6,6 +6,7 @@ export interface IInscripcionRepository {
   obtenerPorJudokaYTorneo(judokaId: string, torneoId: string): Promise<Inscripcion | null>
   aprobarEntrenador(inscripcionId: string): Promise<void>
   registrarPeso(inscripcionId: string, pesoOficial: number): Promise<void>
+  descalificarPorPeso(inscripcionId: string, pesoOficial: number): Promise<void>
   marcarPagado(inscripcionId: string): Promise<void>
   desmarcarPagado(inscripcionId: string): Promise<void>
   cambiarCategoria(inscripcionId: string, nuevaTorneoCategoriaId: string): Promise<void>

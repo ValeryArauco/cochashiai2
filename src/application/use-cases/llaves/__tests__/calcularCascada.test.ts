@@ -101,6 +101,7 @@ describe('identificarPerdedor', () => {
 })
 
 
+// Estructura S=8: 5 combates de repesca con el nuevo sistema multi-ronda
 function mkEst(overrides: Partial<EstructuraLlave> = {}): EstructuraLlave {
   return {
     rondas: 3,
@@ -111,10 +112,15 @@ function mkEst(overrides: Partial<EstructuraLlave> = {}): EstructuraLlave {
     participantes: [],
     tieneRepesca: true,
     repesca: {
-      qfRonda: 1,
-      combatesBronce: [
-        { bronce: 1, alimentadoPorQF: [{ ronda: 1, posicion: 1 }, { ronda: 1, posicion: 3 }] },
-        { bronce: 2, alimentadoPorQF: [{ ronda: 1, posicion: 2 }, { ronda: 1, posicion: 4 }] },
+      combates: [
+        // Repesca R1: perdedores de QF (ronda 1)
+        { rondaRepesca: 1, posicion: 1, fuente1: { tipo: 'perdedor_principal', ronda: 1, posicion: 1 }, fuente2: { tipo: 'perdedor_principal', ronda: 1, posicion: 2 } },
+        { rondaRepesca: 1, posicion: 2, fuente1: { tipo: 'perdedor_principal', ronda: 1, posicion: 3 }, fuente2: { tipo: 'perdedor_principal', ronda: 1, posicion: 4 } },
+        // Repesca R2: perdedores de SF (ronda 2) + final mini-bracket QF
+        { rondaRepesca: 2, posicion: 1, fuente1: { tipo: 'perdedor_principal', ronda: 2, posicion: 1 }, fuente2: { tipo: 'perdedor_principal', ronda: 2, posicion: 2 } },
+        { rondaRepesca: 2, posicion: 2, fuente1: { tipo: 'ganador_repesca', rondaRepesca: 1, posicion: 1 }, fuente2: { tipo: 'ganador_repesca', rondaRepesca: 1, posicion: 2 } },
+        // Repesca R3: Final de Bronce
+        { rondaRepesca: 3, posicion: 1, fuente1: { tipo: 'ganador_repesca', rondaRepesca: 2, posicion: 1 }, fuente2: { tipo: 'ganador_repesca', rondaRepesca: 2, posicion: 2 } },
       ],
     },
     ...overrides,
@@ -127,50 +133,68 @@ describe('resolverRepesca — enrutamiento del perdedor a la fase bronce', () =>
     expect(resolverRepesca(1, 1, est)).toBeNull()
   })
 
-  test('ronda distinta a qfRonda → retorna null', () => {
-    expect(resolverRepesca(2, 1, mkEst())).toBeNull()
+  test('ronda que no alimenta ningún combate de repesca → retorna null', () => {
+    // Ronda 3 (Final) no alimenta repesca (solo SF y QF lo hacen)
+    expect(resolverRepesca(3, 1, mkEst())).toBeNull()
   })
 
-  test('QF posicion 1 → bronce 1, campo judoka1Id (primer alimentador)', () => {
+  test('QF posicion 1 (ronda 1) → repesca R1 pos 1, campo judoka1Id', () => {
     const result = resolverRepesca(1, 1, mkEst())
     expect(result).not.toBeNull()
+    expect(result!.rondaRepesca).toBe(1)
     expect(result!.posicionBronce).toBe(1)
     expect(result!.campo).toBe('judoka1Id')
   })
 
-  test('QF posicion 3 → bronce 1, campo judoka2Id (segundo alimentador)', () => {
-    const result = resolverRepesca(1, 3, mkEst())
+  test('QF posicion 2 (ronda 1) → repesca R1 pos 1, campo judoka2Id', () => {
+    const result = resolverRepesca(1, 2, mkEst())
     expect(result).not.toBeNull()
     expect(result!.posicionBronce).toBe(1)
     expect(result!.campo).toBe('judoka2Id')
   })
 
-  test('QF posicion 2 → bronce 2, campo judoka1Id', () => {
-    const result = resolverRepesca(1, 2, mkEst())
+  test('QF posicion 3 (ronda 1) → repesca R1 pos 2, campo judoka1Id', () => {
+    const result = resolverRepesca(1, 3, mkEst())
     expect(result).not.toBeNull()
+    expect(result!.rondaRepesca).toBe(1)
     expect(result!.posicionBronce).toBe(2)
     expect(result!.campo).toBe('judoka1Id')
   })
 
-  test('QF posicion 4 → bronce 2, campo judoka2Id', () => {
+  test('QF posicion 4 (ronda 1) → repesca R1 pos 2, campo judoka2Id', () => {
     const result = resolverRepesca(1, 4, mkEst())
     expect(result).not.toBeNull()
     expect(result!.posicionBronce).toBe(2)
     expect(result!.campo).toBe('judoka2Id')
   })
 
-  test('posicion que no alimenta ningún bronce → retorna null', () => {
+  test('SF posicion 1 (ronda 2) → repesca R2 pos 1, campo judoka1Id', () => {
+    const result = resolverRepesca(2, 1, mkEst())
+    expect(result).not.toBeNull()
+    expect(result!.rondaRepesca).toBe(2)
+    expect(result!.posicionBronce).toBe(1)
+    expect(result!.campo).toBe('judoka1Id')
+  })
+
+  test('SF posicion 2 (ronda 2) → repesca R2 pos 1, campo judoka2Id', () => {
+    const result = resolverRepesca(2, 2, mkEst())
+    expect(result).not.toBeNull()
+    expect(result!.rondaRepesca).toBe(2)
+    expect(result!.posicionBronce).toBe(1)
+    expect(result!.campo).toBe('judoka2Id')
+  })
+
+  test('posicion que no alimenta ningún combate de repesca → retorna null', () => {
     expect(resolverRepesca(1, 99, mkEst())).toBeNull()
   })
 
-  test('bracket S=4: qfRonda=1, un solo combate de bronce', () => {
+  test('bracket S=4: SF losers → 1 combate de bronce', () => {
     const est = mkEst({
       rondas: 2,
       slots: 4,
       repesca: {
-        qfRonda: 1,
-        combatesBronce: [
-          { bronce: 1, alimentadoPorQF: [{ ronda: 1, posicion: 1 }, { ronda: 1, posicion: 2 }] },
+        combates: [
+          { rondaRepesca: 1, posicion: 1, fuente1: { tipo: 'perdedor_principal', ronda: 1, posicion: 1 }, fuente2: { tipo: 'perdedor_principal', ronda: 1, posicion: 2 } },
         ],
       },
     })

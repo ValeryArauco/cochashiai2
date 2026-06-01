@@ -48,6 +48,7 @@ function mkRepos(inscripciones: Inscripcion[]): {
     desmarcarPagado: jest.fn(),
     cambiarCategoria: jest.fn(),
     eliminar: jest.fn(),
+    descalificarPorPeso: jest.fn(),
   } as jest.Mocked<IInscripcionRepository>
 
   return { llaveRepo, inscripcionRepo }

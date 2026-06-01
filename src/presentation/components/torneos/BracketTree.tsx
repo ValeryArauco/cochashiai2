@@ -22,6 +22,13 @@ export function labelRonda(ronda: number, maxRonda: number): string {
   return `Ronda ${ronda}`
 }
 
+function labelRepescaRonda(rondaRepesca: number, totalRondasRepesca: number): string {
+  if (totalRondasRepesca === 1) return 'Medalla de Bronce'
+  if (rondaRepesca === totalRondasRepesca) return 'Final Bronce'
+  if (rondaRepesca === totalRondasRepesca - 1) return 'Semifinal Repesca'
+  return 'Cuartos Repesca'
+}
+
 function chipEstado(estado: EstadoCombate) {
   const map: Record<EstadoCombate, { label: string; color: 'default' | 'warning' | 'success' | 'info' }> = {
     pendiente:  { label: 'Pendiente',  color: 'default' },
@@ -149,11 +156,12 @@ interface RondaColumnaProps {
   maxRonda: number
   rol: RolUsuario
   totalR1: number
+  esRepesca?: boolean
   onIniciar?: (c: Combate) => void
   onResultado?: (c: Combate) => void
 }
 
-function RondaColumna({ label, combates, maxRonda, rol, totalR1, onIniciar, onResultado }: RondaColumnaProps) {
+function RondaColumna({ label, combates, maxRonda, rol, totalR1, esRepesca = false, onIniciar, onResultado }: RondaColumnaProps) {
   const slotH = 90
   const totalH = totalR1 * slotH
 
@@ -162,7 +170,7 @@ function RondaColumna({ label, combates, maxRonda, rol, totalR1, onIniciar, onRe
       <Typography
         variant="caption"
         fontWeight="bold"
-        color="text.secondary"
+        color={esRepesca ? 'warning.main' : 'text.secondary'}
         align="center"
         sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}
       >
@@ -175,6 +183,7 @@ function RondaColumna({ label, combates, maxRonda, rol, totalR1, onIniciar, onRe
             combate={c}
             maxRonda={maxRonda}
             rol={rol}
+            esRepesca={esRepesca}
             onIniciar={onIniciar}
             onResultado={onResultado}
           />
@@ -224,7 +233,7 @@ interface Props {
 
 export function BracketTree({ llave, combates, rol, onIniciar, onResultado }: Props) {
   const principales = combates.filter(c => c.fase === 'principal').sort((a, b) => a.ronda - b.ronda || a.posicion - b.posicion)
-  const repesca = combates.filter(c => c.fase === 'repesca').sort((a, b) => a.posicion - b.posicion)
+  const repescaCombates = combates.filter(c => c.fase === 'repesca').sort((a, b) => a.ronda - b.ronda || a.posicion - b.posicion)
 
   const est = llave.estructura as EstructuraLlave
   const maxRonda = est.rondas
@@ -237,9 +246,23 @@ export function BracketTree({ llave, combates, rol, onIniciar, onResultado }: Pr
   const rondas = Object.keys(porRonda).map(Number).sort((a, b) => a - b)
   const totalR1 = porRonda[rondas[0]]?.length ?? 1
 
+  // Group repesca combates by their rondaRepesca (= DB ronda - est.rondas)
+  const repescaPorRonda: Record<number, Combate[]> = {}
+  for (const c of repescaCombates) {
+    const rondaRepesca = c.ronda - maxRonda
+    if (!repescaPorRonda[rondaRepesca]) repescaPorRonda[rondaRepesca] = []
+    repescaPorRonda[rondaRepesca].push(c)
+  }
+  const repescaRondas = Object.keys(repescaPorRonda).map(Number).sort((a, b) => a - b)
+  const totalRepescaRondas = repescaRondas.length
+
+  // totalR1 for repesca bracket sizing: use the first repesca round count
+  const totalRepescaR1 = repescaRondas.length > 0 ? (repescaPorRonda[repescaRondas[0]]?.length ?? 1) : 1
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
+      {/* ── Cuadro principal ─────────────────────────────────────────────── */}
       <Box sx={{ overflowX: 'auto', pb: 1 }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0 }}>
           {rondas.map((ronda, idx) => (
@@ -265,35 +288,51 @@ export function BracketTree({ llave, combates, rol, onIniciar, onResultado }: Pr
         </Box>
       </Box>
 
-      {est.tieneRepesca && repesca.length > 0 && (
+      {/* ── Repesca / Medallas de bronce ─────────────────────────────────── */}
+      {est.tieneRepesca && repescaCombates.length > 0 && (
         <Box>
           <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
             <MilitaryTechIcon sx={{ color: 'warning.main' }} />
             <Typography variant="subtitle2" fontWeight="bold" color="warning.main">
-              Medallas de Bronce
+              Medalla de Bronce
             </Typography>
           </Stack>
-          <Stack direction="row" spacing={2} flexWrap="wrap">
-            {repesca.map((c, i) => (
-              <Box key={c.id} sx={{ minWidth: 200 }}>
-                <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                  Bronce {i + 1}
-                </Typography>
-                <MatchBox
-                  combate={c}
-                  maxRonda={maxRonda}
-                  rol={rol}
-                  esRepesca
-                  onIniciar={onIniciar}
-                  onResultado={onResultado}
-                />
-              </Box>
-            ))}
-          </Stack>
+
+          <Box sx={{ overflowX: 'auto', pb: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 0 }}>
+              {repescaRondas.map((rondaRepesca, idx) => (
+                <Box key={rondaRepesca} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  {idx > 0 && repescaRondas[idx - 1] !== undefined && (
+                    <Conector
+                      fromCount={repescaPorRonda[repescaRondas[idx - 1]].length}
+                      toCount={repescaPorRonda[rondaRepesca].length}
+                      totalR1={totalRepescaR1}
+                    />
+                  )}
+                  <RondaColumna
+                    label={labelRepescaRonda(rondaRepesca, totalRepescaRondas)}
+                    combates={repescaPorRonda[rondaRepesca]}
+                    maxRonda={maxRonda}
+                    rol={rol}
+                    totalR1={totalRepescaR1}
+                    esRepesca
+                    onIniciar={onIniciar}
+                    onResultado={onResultado}
+                  />
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {totalRepescaRondas > 1 && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Los 2 perdedores de semifinal se enfrentan entre sí. El ganador se enfrenta al ganador del bracket de cuartos repesca para definir la medalla de bronce.
+            </Typography>
+          )}
         </Box>
       )}
 
-      {est.tieneRepesca && repesca.length === 0 && (
+      {est.tieneRepesca && repescaCombates.length === 0 && (
         <Stack direction="row" spacing={1} alignItems="center">
           <MilitaryTechIcon sx={{ color: 'warning.main' }} />
           <Typography variant="body2" color="text.secondary">

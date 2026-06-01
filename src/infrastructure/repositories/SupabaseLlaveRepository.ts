@@ -73,25 +73,28 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
           judoka2_shidos: 0,
           fase: c.fase,
           estado: c.estado,
+          tipo_victoria: c.tipoVictoria ?? null,
           tatami: c.tatami ?? null,
         })))
 
       if (combatesError) throw new Error('No se pudieron crear los combates')
     }
-    const { data: byeCombates } = await supabase
+
+    // Cascade byes and DQ-auto-resolved combates (finalizado with ganador_id)
+    const { data: autoCombates } = await supabase
       .from('combates')
       .select('id, llave_id, ronda, posicion, judoka1_id, judoka2_id, ganador_id, fase')
       .eq('llave_id', llaveId)
-      .eq('estado', 'bye')
+      .in('estado', ['bye', 'finalizado'])
       .not('ganador_id', 'is', null)
 
-    if (byeCombates) {
-      for (const bye of byeCombates as {
+    if (autoCombates) {
+      for (const c of autoCombates as {
         id: string; llave_id: string; ronda: number; posicion: number
         judoka1_id: string | null; judoka2_id: string | null
         ganador_id: string | null; fase: string
       }[]) {
-        await this.cascadear(bye)
+        await this.cascadear(c)
       }
     }
 
@@ -172,6 +175,14 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
     return CombateMapper.toDomain(data as CombateDTO)
   }
 
+  /**
+   * Propaga el resultado de un combate:
+   * - fase='principal': ganador avanza en el cuadro principal; perdedor va a su combate de repesca
+   * - fase='repesca': ganador avanza al siguiente combate de repesca
+   *
+   * La lógica de alimentación está completamente codificada en estructura.repesca.combates,
+   * lo que permite soportar la estructura multi-ronda de bronce.
+   */
   private async cascadear(combate: {
     id: string
     llave_id: string
@@ -194,63 +205,105 @@ export class SupabaseLlaveRepository implements ILlaveRepository {
     if (!llaveData) return
     const est = llaveData.estructura as EstructuraLlave
     const numTatamis = Math.max(1, est.numTatamis ?? 1)
-
-    if (fase !== 'principal') return
-
-
-    const nextRonda = ronda + 1
-    if (nextRonda <= est.rondas) {
-      const nextPosicion = Math.ceil(posicion / 2)
-      const campo = posicion % 2 === 1 ? 'judoka1_id' : 'judoka2_id'
-      const tatami = ((nextPosicion - 1) % numTatamis) + 1
-
-      const { data: nextCombate } = await supabase
-        .from('combates')
-        .select('id, estado')
-        .eq('llave_id', llave_id)
-        .eq('ronda', nextRonda)
-        .eq('posicion', nextPosicion)
-        .eq('fase', 'principal')
-        .maybeSingle()
-
-      if (nextCombate && nextCombate.estado !== 'finalizado') {
-        await supabase
-          .from('combates')
-          .update({ [campo]: ganador_id, tatami })
-          .eq('id', nextCombate.id)
-      }
-    }
-
-
-    if (!est.repesca) return
-    if (ronda !== est.repesca.qfRonda) return
-
     const loserId = ganador_id === judoka1_id ? judoka2_id : judoka1_id
-    if (!loserId) return
 
-    for (const bronce of est.repesca.combatesBronce) {
-      const idx = bronce.alimentadoPorQF.findIndex(
-        qf => qf.ronda === ronda && qf.posicion === posicion
-      )
-      if (idx === -1) continue
+    if (fase === 'principal') {
+      // 1. Avanzar ganador en el cuadro principal
+      const nextRonda = ronda + 1
+      if (nextRonda <= est.rondas) {
+        const nextPosicion = Math.ceil(posicion / 2)
+        const campo = posicion % 2 === 1 ? 'judoka1_id' : 'judoka2_id'
+        const tatami = ((nextPosicion - 1) % numTatamis) + 1
 
-      const campoRepesca = idx === 0 ? 'judoka1_id' : 'judoka2_id'
-
-      const { data: repescaCombate } = await supabase
-        .from('combates')
-        .select('id, estado')
-        .eq('llave_id', llave_id)
-        .eq('posicion', bronce.bronce)
-        .eq('fase', 'repesca')
-        .maybeSingle()
-
-      if (repescaCombate && repescaCombate.estado !== 'finalizado') {
-        await supabase
+        const { data: nextCombate } = await supabase
           .from('combates')
-          .update({ [campoRepesca]: loserId })
-          .eq('id', repescaCombate.id)
+          .select('id, estado')
+          .eq('llave_id', llave_id)
+          .eq('ronda', nextRonda)
+          .eq('posicion', nextPosicion)
+          .eq('fase', 'principal')
+          .maybeSingle()
+
+        if (nextCombate && nextCombate.estado !== 'finalizado') {
+          await supabase
+            .from('combates')
+            .update({ [campo]: ganador_id, tatami })
+            .eq('id', nextCombate.id)
+        }
       }
-      break
+
+      // 2. Alimentar perdedor al combate de repesca correspondiente
+      if (!est.repesca || !loserId) return
+
+      for (const rc of est.repesca.combates) {
+        const matchesFuente1 =
+          rc.fuente1.tipo === 'perdedor_principal' &&
+          rc.fuente1.ronda === ronda &&
+          rc.fuente1.posicion === posicion
+        const matchesFuente2 =
+          rc.fuente2.tipo === 'perdedor_principal' &&
+          rc.fuente2.ronda === ronda &&
+          rc.fuente2.posicion === posicion
+
+        if (!matchesFuente1 && !matchesFuente2) continue
+
+        const campo = matchesFuente1 ? 'judoka1_id' : 'judoka2_id'
+        const rondaDB = est.rondas + rc.rondaRepesca
+
+        const { data: repescaCombate } = await supabase
+          .from('combates')
+          .select('id, estado')
+          .eq('llave_id', llave_id)
+          .eq('fase', 'repesca')
+          .eq('ronda', rondaDB)
+          .eq('posicion', rc.posicion)
+          .maybeSingle()
+
+        if (repescaCombate && repescaCombate.estado !== 'finalizado') {
+          await supabase
+            .from('combates')
+            .update({ [campo]: loserId })
+            .eq('id', repescaCombate.id)
+        }
+        break
+      }
+
+    } else if (fase === 'repesca' && est.repesca) {
+      // 3. Avanzar ganador al siguiente combate de repesca
+      const rondaRepescaActual = ronda - est.rondas
+
+      for (const rc of est.repesca.combates) {
+        const matchesFuente1 =
+          rc.fuente1.tipo === 'ganador_repesca' &&
+          rc.fuente1.rondaRepesca === rondaRepescaActual &&
+          rc.fuente1.posicion === posicion
+        const matchesFuente2 =
+          rc.fuente2.tipo === 'ganador_repesca' &&
+          rc.fuente2.rondaRepesca === rondaRepescaActual &&
+          rc.fuente2.posicion === posicion
+
+        if (!matchesFuente1 && !matchesFuente2) continue
+
+        const campo = matchesFuente1 ? 'judoka1_id' : 'judoka2_id'
+        const rondaDB = est.rondas + rc.rondaRepesca
+
+        const { data: nextRepescaCombate } = await supabase
+          .from('combates')
+          .select('id, estado')
+          .eq('llave_id', llave_id)
+          .eq('fase', 'repesca')
+          .eq('ronda', rondaDB)
+          .eq('posicion', rc.posicion)
+          .maybeSingle()
+
+        if (nextRepescaCombate && nextRepescaCombate.estado !== 'finalizado') {
+          await supabase
+            .from('combates')
+            .update({ [campo]: ganador_id })
+            .eq('id', nextRepescaCombate.id)
+        }
+        break
+      }
     }
   }
 

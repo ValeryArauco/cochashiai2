@@ -11,6 +11,8 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import EditIcon from '@mui/icons-material/Edit'
 import PaymentsIcon from '@mui/icons-material/Payments'
+import BlockIcon from '@mui/icons-material/Block'
+import ScaleIcon from '@mui/icons-material/Scale'
 import { useState } from 'react'
 import { useSolicitudesAdmin } from '../../hooks/useSolicitudesAdmin'
 import { Inscripcion } from '../../../domain/models/Inscripcion'
@@ -43,7 +45,7 @@ interface DialogCambio {
 }
 
 export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
-  const { inscripciones, torneoCategorias, cargando, error, registrarPeso, registrarPago, deshacerPago, cambiarCategoriaYRegistrarPeso, eliminar } = useSolicitudesAdmin(torneoId)
+  const { inscripciones, torneoCategorias, cargando, error, registrarPeso, registrarPago, deshacerPago, cambiarCategoriaYRegistrarPeso, descalificarPorPeso, eliminar } = useSolicitudesAdmin(torneoId)
 
   const [pesos, setPesos] = useState<Record<string, string>>({})
   const [pesoFueraDeRango, setPesoFueraDeRango] = useState<Record<string, number>>({})
@@ -107,6 +109,15 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
       await eliminar(id)
       setPesoFueraDeRango(prev => { const n = { ...prev }; delete n[id]; return n })
     }
+  }
+
+  const handleDescalificarPorPeso = async (ins: Inscripcion) => {
+    const peso = pesoFueraDeRango[ins.id]
+    if (!peso) return
+    if (!confirm(`¿Confirmar descalificación por peso? ${ins.judoka?.usuario.nombre} pesó ${peso} kg (fuera de categoría). Seguirá en el bracket pero perderá su primer combate por W.O.`)) return
+    await descalificarPorPeso(ins, peso)
+    setPesoFueraDeRango(prev => { const n = { ...prev }; delete n[ins.id]; return n })
+    setPesos(prev => { const n = { ...prev }; delete n[ins.id]; return n })
   }
 
   const handleAbrirCambioCategoria = (ins: Inscripcion) => {
@@ -219,6 +230,7 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
               const confirmado = ins.estado === 'confirmado' || ins.estado === 'pendiente_pago'
               const sinPeso = ins.estado === 'aprobado_entrenador'
               const fueraDeRango = pesoFueraDeRango[ins.id]
+              const esDQ = ins.descalificadoPeso
 
               return (
                 <Box key={ins.id}>
@@ -234,7 +246,17 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      {confirmado ? (
+                      {confirmado && esDQ ? (
+                        <>
+                          <Chip label="Desc. por peso" color="error" size="small" icon={<BlockIcon />} />
+                          <Chip
+                            label={`${ins.pesoOficial} kg (${pesoLabel(ins.torneoCategoria?.categoria.pesoMinimo, ins.torneoCategoria?.categoria.pesoMaximo)})`}
+                            color="warning"
+                            size="small"
+                            icon={<ScaleIcon />}
+                          />
+                        </>
+                      ) : confirmado ? (
                         <Chip label="Pesaje ✓" color="info" size="small" icon={<CheckCircleIcon />} />
                       ) : sinPeso && fueraDeRango != null ? (
                         <>
@@ -252,6 +274,11 @@ export function ModalSolicitudesAdmin({ abierto, onCerrar, torneoId }: Props) {
                           <Tooltip title="Corregir el peso ingresado">
                             <IconButton size="small" onClick={() => setPesoFueraDeRango(prev => { const n = { ...prev }; delete n[ins.id]; return n })}>
                               <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Descalificar por peso (queda en bracket pero pierde su primer combate por W.O.)">
+                            <IconButton color="error" size="small" onClick={() => handleDescalificarPorPeso(ins)}>
+                              <BlockIcon />
                             </IconButton>
                           </Tooltip>
                         </>

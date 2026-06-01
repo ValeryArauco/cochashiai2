@@ -7,6 +7,7 @@ export interface InscripcionDTO {
   aprobado_por_sensei_id?: string
   fecha_aprobacion_sensei?: string
   estado: string
+  descalificado_peso?: boolean
   judoka?: {
     id: string
     usuario_id: string

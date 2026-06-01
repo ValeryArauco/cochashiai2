@@ -92,10 +92,19 @@ export class SupabaseInscripcionRepository implements IInscripcionRepository {
   async registrarPeso(inscripcionId: string, pesoOficial: number): Promise<void> {
     const { error } = await supabase
       .from('inscripciones')
-      .update({ estado: 'confirmado', peso_oficial: pesoOficial })
+      .update({ estado: 'confirmado', peso_oficial: pesoOficial, descalificado_peso: false })
       .eq('id', inscripcionId)
 
     if (error) throw new Error('No se pudo registrar el peso')
+  }
+
+  async descalificarPorPeso(inscripcionId: string, pesoOficial: number): Promise<void> {
+    const { error } = await supabase
+      .from('inscripciones')
+      .update({ estado: 'confirmado', peso_oficial: pesoOficial, descalificado_peso: true })
+      .eq('id', inscripcionId)
+
+    if (error) throw new Error('No se pudo registrar la descalificación por peso')
   }
 
   async marcarPagado(inscripcionId: string): Promise<void> {

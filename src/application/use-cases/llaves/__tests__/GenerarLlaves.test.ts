@@ -63,6 +63,7 @@ function mkRepos(inscripciones: Inscripcion[]): {
     desmarcarPagado: jest.fn(),
     cambiarCategoria: jest.fn(),
     eliminar: jest.fn(),
+    descalificarPorPeso: jest.fn(),
   } as jest.Mocked<IInscripcionRepository>
 
   return { llaveRepo, inscripcionRepo, capturado }
@@ -98,8 +99,8 @@ describe('N=4 — Cadete Femenino -52kg (caso mínimo)', () => {
     expect(estructura.rondas).toBe(2)
     expect(estructura.byes).toBe(0)
     expect(estructura.tieneRepesca).toBe(true)
-    expect(estructura.repesca?.qfRonda).toBe(1)
-    expect(estructura.repesca?.combatesBronce).toHaveLength(1)
+    expect(estructura.repesca?.combates).toHaveLength(1)
+    expect(estructura.repesca?.combates[0].rondaRepesca).toBe(1)
   })
 
   test('R1 tiene 2 combates sin byes', async () => {
@@ -145,18 +146,17 @@ describe('N=8 — Senior Masculino -66kg (cuadro perfecto)', () => {
     mkInscripcion('j8', 'Verde',  'JudoC'),
   ]
 
-  test('genera 9 combates en total', async () => {
+  test('genera 12 combates en total', async () => {
     const { combates } = await ejecutar(inscripciones, 2)
-    expect(combates).toHaveLength(9)
+    expect(combates).toHaveLength(12)
   })
 
-  test('estructura: S=8, rondas=3, 0 byes, 2 bronces, qfRonda=1', async () => {
+  test('estructura: S=8, rondas=3, 0 byes, 5 combates de repesca', async () => {
     const { estructura } = await ejecutar(inscripciones, 2)
     expect(estructura.slots).toBe(8)
     expect(estructura.rondas).toBe(3)
     expect(estructura.byes).toBe(0)
-    expect(estructura.repesca?.qfRonda).toBe(1)
-    expect(estructura.repesca?.combatesBronce).toHaveLength(2)
+    expect(estructura.repesca?.combates).toHaveLength(5)
   })
 
   test('ningún combate R1 es bye', async () => {
@@ -193,9 +193,9 @@ describe('N=8 — Senior Masculino -66kg (cuadro perfecto)', () => {
     expect([...tatamisUsados].every(t => t! >= 1 && t! <= 2)).toBe(true)
   })
 
-  test('hay 2 combates de bronce (repesca)', async () => {
+  test('hay 5 combates de repesca (bracket bronce multi-ronda)', async () => {
     const { combates } = await ejecutar(inscripciones, 2)
-    expect(combates.filter(c => c.fase === 'repesca')).toHaveLength(2)
+    expect(combates.filter(c => c.fase === 'repesca')).toHaveLength(5)
   })
 
   test('cada judoka aparece en un solo combate de R1', async () => {
@@ -226,19 +226,18 @@ describe('N=13 — Senior Masculino -73kg (con byes)', () => {
     mkInscripcion('j13', 'Amarillo','JudoC'),
   ]
 
-  test('genera 17 combates en total', async () => {
+  test('genera 20 combates en total', async () => {
     const { combates } = await ejecutar(inscripciones, 3)
-    expect(combates).toHaveLength(17)
+    expect(combates).toHaveLength(20)
   })
 
-  test('estructura: S=16, rondas=4, byes=3, qfRonda=2', async () => {
+  test('estructura: S=16, rondas=4, byes=3, 5 combates de repesca', async () => {
     const { estructura } = await ejecutar(inscripciones, 3)
     expect(estructura.slots).toBe(16)
     expect(estructura.rondas).toBe(4)
     expect(estructura.byes).toBe(3)
     expect(estructura.tieneRepesca).toBe(true)
-    expect(estructura.repesca?.qfRonda).toBe(2)
-    expect(estructura.repesca?.combatesBronce).toHaveLength(2)
+    expect(estructura.repesca?.combates).toHaveLength(5)
   })
 
   test('exactamente 3 combates en estado bye', async () => {
@@ -269,9 +268,9 @@ describe('N=13 — Senior Masculino -73kg (con byes)', () => {
     expect(r1.filter(c => c.estado === 'pendiente')).toHaveLength(5)
   })
 
-  test('hay 2 combates de bronce (repesca)', async () => {
+  test('hay 5 combates de repesca (bracket bronce multi-ronda)', async () => {
     const { combates } = await ejecutar(inscripciones, 3)
-    expect(combates.filter(c => c.fase === 'repesca')).toHaveLength(2)
+    expect(combates.filter(c => c.fase === 'repesca')).toHaveLength(5)
   })
 
   test('tatamis asignados solo en combates pendientes de R1 (no en byes)', async () => {
@@ -429,19 +428,18 @@ describe('N=5 — byes para los 3 top seeds (S=8)', () => {
     mkInscripcion('j5', 'Naranja', 'ClubA'),
   ]
 
-  test('genera 9 combates en total (mismo que N=8 porque S=8)', async () => {
+  test('genera 12 combates en total (mismo que N=8 porque S=8)', async () => {
     const { combates } = await ejecutar(inscripciones)
-    expect(combates).toHaveLength(9)
+    expect(combates).toHaveLength(12)
   })
 
-  test('estructura: S=8, rondas=3, byes=3, 2 bronces, qfRonda=1', async () => {
+  test('estructura: S=8, rondas=3, byes=3, 5 combates de repesca', async () => {
     const { estructura } = await ejecutar(inscripciones)
     expect(estructura.slots).toBe(8)
     expect(estructura.rondas).toBe(3)
     expect(estructura.byes).toBe(3)
     expect(estructura.tieneRepesca).toBe(true)
-    expect(estructura.repesca?.qfRonda).toBe(1)
-    expect(estructura.repesca?.combatesBronce).toHaveLength(2)
+    expect(estructura.repesca?.combates).toHaveLength(5)
   })
 
   test('R1 tiene 3 byes y 1 combate real', async () => {

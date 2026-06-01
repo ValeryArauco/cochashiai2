@@ -2,10 +2,12 @@
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Typography, Stack, Divider, Alert,
-  FormControl, InputLabel, Select, MenuItem, IconButton, Box,
+  FormControl, InputLabel, Select, MenuItem, IconButton, Box, Chip,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
+import TimerIcon from '@mui/icons-material/Timer'
+import StopIcon from '@mui/icons-material/Stop'
 import { useEffect, useRef, useState } from 'react'
 import { Combate, TipoVictoria } from '../../../domain/models/Combate'
 
@@ -30,6 +32,10 @@ const TIPOS_VICTORIA: { value: TipoVictoria; label: string }[] = [
   { value: 'wo',              label: 'W.O.' },
 ]
 
+// Osae-komi thresholds (seconds)
+const WAZARI_SEG = 10
+const IPPON_SEG = 20
+
 function nombreJudoka(j?: Combate['judoka1']): string {
   if (!j) return '—'
   return `${j.usuario.apellidoPaterno ?? ''} ${j.usuario.nombre}`.trim()
@@ -52,6 +58,18 @@ function Contador({ label, value, onChange }: { label: string; value: number; on
   )
 }
 
+function colorOsae(seg: number): 'default' | 'warning' | 'success' {
+  if (seg >= IPPON_SEG) return 'success'
+  if (seg >= WAZARI_SEG) return 'warning'
+  return 'default'
+}
+
+function labelZona(seg: number): string {
+  if (seg >= IPPON_SEG) return `${seg}s → IPPON`
+  if (seg >= WAZARI_SEG) return `${seg}s → Waza-ari (yuko)`
+  return `${seg}s`
+}
+
 export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar, onMarcadorChange }: Props) {
   const [j1Ippones,    setJ1Ippones]    = useState(combate.judoka1Ippones)
   const [j1Wazaris,    setJ1Wazaris]    = useState(combate.judoka1Wazaris)
@@ -64,6 +82,22 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar,
   const [guardando,    setGuardando]    = useState(false)
   const [error,        setError]        = useState<string | null>(null)
 
+  // Osae-komi (inmovilización) state
+  // osaeJudoka: 0 = no hold, 1 = judoka1 is holding, 2 = judoka2 is holding
+  const [osaeJudoka,   setOsaeJudoka]   = useState<0 | 1 | 2>(0)
+  const [osaeSegundos, setOsaeSegundos] = useState(0)
+  const osaeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const osaeStartRef    = useRef<number>(0)
+
+  // Mirror j1/j2 score state into refs so osae callbacks see latest values
+  const j1IpponesRef  = useRef(j1Ippones)
+  const j1WazarisRef  = useRef(j1Wazaris)
+  const j2IpponesRef  = useRef(j2Ippones)
+  const j2WazarisRef  = useRef(j2Wazaris)
+  useEffect(() => { j1IpponesRef.current  = j1Ippones },  [j1Ippones])
+  useEffect(() => { j1WazarisRef.current  = j1Wazaris },  [j1Wazaris])
+  useEffect(() => { j2IpponesRef.current  = j2Ippones },  [j2Ippones])
+  useEffect(() => { j2WazarisRef.current  = j2Wazaris },  [j2Wazaris])
 
   const marcadorRef = useRef<Marcador>({
     judoka1Ippones: j1Ippones, judoka1Wazaris: j1Wazaris, judoka1Shidos: j1Shidos,
@@ -74,6 +108,11 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar,
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
 
+  // Cleanup osae interval on unmount
+  useEffect(() => () => {
+    if (osaeIntervalRef.current) clearInterval(osaeIntervalRef.current)
+  }, [])
+
   function actualizarScore(campo: keyof Marcador, valor: number) {
     const nuevo = { ...marcadorRef.current, [campo]: valor }
     marcadorRef.current = nuevo
@@ -82,6 +121,47 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar,
       debounceRef.current = null
       onMarcadorChangeRef.current?.(combate.id, marcadorRef.current)
     }, 150)
+  }
+
+  function iniciarOsae(judoka: 1 | 2) {
+    if (osaeIntervalRef.current) clearInterval(osaeIntervalRef.current)
+    setOsaeJudoka(judoka)
+    setOsaeSegundos(0)
+    osaeStartRef.current = Date.now()
+    osaeIntervalRef.current = setInterval(() => {
+      setOsaeSegundos(Math.floor((Date.now() - osaeStartRef.current) / 1000))
+    }, 100)
+  }
+
+  function pararOsae() {
+    if (osaeIntervalRef.current) {
+      clearInterval(osaeIntervalRef.current)
+      osaeIntervalRef.current = null
+    }
+    const segundos = Math.floor((Date.now() - osaeStartRef.current) / 1000)
+    const holder = osaeJudoka
+    setOsaeJudoka(0)
+    setOsaeSegundos(0)
+
+    if (holder === 0 || segundos < WAZARI_SEG) return
+
+    if (segundos >= IPPON_SEG) {
+      if (holder === 1) {
+        const v = j1IpponesRef.current + 1
+        setJ1Ippones(v); actualizarScore('judoka1Ippones', v)
+      } else {
+        const v = j2IpponesRef.current + 1
+        setJ2Ippones(v); actualizarScore('judoka2Ippones', v)
+      }
+    } else {
+      if (holder === 1) {
+        const v = j1WazarisRef.current + 1
+        setJ1Wazaris(v); actualizarScore('judoka1Wazaris', v)
+      } else {
+        const v = j2WazarisRef.current + 1
+        setJ2Wazaris(v); actualizarScore('judoka2Wazaris', v)
+      }
+    }
   }
 
   useEffect(() => {
@@ -122,12 +202,15 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar,
   const j1Nombre = nombreJudoka(combate.judoka1)
   const j2Nombre = nombreJudoka(combate.judoka2)
 
+  const osaeActivo = osaeJudoka !== 0
+
   return (
     <Dialog open={abierto} onClose={onCerrar} maxWidth="md" fullWidth>
       <DialogTitle>Registrar resultado</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2 }}>
         {error && <Alert severity="error">{error}</Alert>}
 
+        {/* ── Marcador principal ─────────────────────────────────────────── */}
         <Stack direction="row" spacing={2} alignItems="flex-start" justifyContent="space-around">
           <Stack alignItems="center" spacing={1.5} flex={1}>
             <Stack direction="row" spacing={1} alignItems="center">
@@ -160,6 +243,69 @@ export function RegistrarResultadoModal({ abierto, onCerrar, combate, onGuardar,
           </Stack>
         </Stack>
 
+        {/* ── Osae-komi / Inmovilización ─────────────────────────────────── */}
+        <Box sx={{ border: '1px solid', borderColor: osaeActivo ? 'warning.main' : 'divider', borderRadius: 1, p: 1.5, bgcolor: osaeActivo ? 'warning.50' : 'action.hover' }}>
+          <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+            <TimerIcon fontSize="small" color={osaeActivo ? 'warning' : 'action'} />
+            <Typography variant="caption" fontWeight="bold" color={osaeActivo ? 'warning.main' : 'text.secondary'} textTransform="uppercase" letterSpacing={0.5}>
+              Inmovilización (osae-komi)
+            </Typography>
+            {osaeActivo && (
+              <Chip
+                label={labelZona(osaeSegundos)}
+                color={colorOsae(osaeSegundos)}
+                size="small"
+                sx={{ fontWeight: 'bold', fontSize: '0.8rem', minWidth: 110 }}
+              />
+            )}
+          </Stack>
+
+          {!osaeActivo ? (
+            <Stack direction="row" spacing={1} justifyContent="center">
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={<TimerIcon />}
+                onClick={() => iniciarOsae(1)}
+                disabled={!combate.judoka1Id}
+              >
+                {j1Nombre} aplica
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                startIcon={<TimerIcon />}
+                onClick={() => iniciarOsae(2)}
+                disabled={!combate.judoka2Id}
+              >
+                {j2Nombre} aplica
+              </Button>
+            </Stack>
+          ) : (
+            <Stack direction="row" spacing={2} alignItems="center" justifyContent="center">
+              <Typography variant="body2" color="text.secondary">
+                <strong>{osaeJudoka === 1 ? j1Nombre : j2Nombre}</strong> inmoviliza...
+              </Typography>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<StopIcon />}
+                onClick={pararOsae}
+                size="small"
+              >
+                Liberar
+              </Button>
+            </Stack>
+          )}
+
+          <Typography variant="caption" color="text.secondary" display="block" textAlign="center" mt={0.5}>
+            {'<'}10 s = nada · 10–19 s = waza-ari (yuko) · ≥20 s = ippon
+          </Typography>
+        </Box>
+
+        {/* ── Ganador y tipo de victoria ─────────────────────────────────── */}
         <FormControl fullWidth size="small">
           <InputLabel>Ganador</InputLabel>
           <Select label="Ganador" value={ganadorId} onChange={e => setGanadorId(e.target.value)}>

@@ -6,9 +6,11 @@ import { TorneoCategoria } from '../../domain/models/TorneoCategoria'
 import { Categoria, GeneroCategoria, GrupoEdad } from '../../domain/models/Categoria'
 import { SupabaseInscripcionRepository } from '../../infrastructure/repositories/SupabaseInscripcionRepository'
 import { AprobarInscripcionAdmin } from '../../application/use-cases/inscripciones/AprobarInscripcionAdmin'
+import { DescalificarJudokaPorPeso } from '../../application/use-cases/inscripciones/DescalificarJudokaPorPeso'
 
 const repo = new SupabaseInscripcionRepository()
 const registrarPesoUseCase = new AprobarInscripcionAdmin(repo)
+const descalificarPesoUseCase = new DescalificarJudokaPorPeso(repo)
 
 export function useSolicitudesAdmin(torneoId: string) {
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([])
@@ -110,6 +112,20 @@ export function useSolicitudesAdmin(torneoId: string) {
     }
   }
 
+  const descalificarPorPeso = async (ins: Inscripcion, pesoOficial: number) => {
+    try {
+      await descalificarPesoUseCase.execute(ins.id, pesoOficial)
+      setInscripciones(prev =>
+        prev.map(i => i.id === ins.id
+          ? { ...i, estado: 'confirmado' as const, pesoOficial, descalificadoPeso: true }
+          : i
+        )
+      )
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al registrar descalificación')
+    }
+  }
+
   const eliminar = async (inscripcionId: string) => {
     try {
       await repo.eliminar(inscripcionId)
@@ -119,5 +135,5 @@ export function useSolicitudesAdmin(torneoId: string) {
     }
   }
 
-  return { inscripciones, torneoCategorias, cargando, error, registrarPeso, registrarPago, deshacerPago, cambiarCategoriaYRegistrarPeso, eliminar }
+  return { inscripciones, torneoCategorias, cargando, error, registrarPeso, registrarPago, deshacerPago, cambiarCategoriaYRegistrarPeso, descalificarPorPeso, eliminar }
 }

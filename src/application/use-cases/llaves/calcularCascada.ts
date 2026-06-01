@@ -29,18 +29,23 @@ export function resolverRepesca(
   ronda: number,
   posicion: number,
   est: EstructuraLlave,
-): { posicionBronce: number; campo: 'judoka1Id' | 'judoka2Id' } | null {
+): { rondaRepesca: number; posicionBronce: number; campo: 'judoka1Id' | 'judoka2Id' } | null {
   if (!est.repesca) return null
-  if (ronda !== est.repesca.qfRonda) return null
 
-  for (const bronce of est.repesca.combatesBronce) {
-    const idx = bronce.alimentadoPorQF.findIndex(
-      qf => qf.ronda === ronda && qf.posicion === posicion,
-    )
-    if (idx === -1) continue
-    return {
-      posicionBronce: bronce.bronce,
-      campo: idx === 0 ? 'judoka1Id' : 'judoka2Id',
+  for (const rc of est.repesca.combates) {
+    if (
+      rc.fuente1.tipo === 'perdedor_principal' &&
+      rc.fuente1.ronda === ronda &&
+      rc.fuente1.posicion === posicion
+    ) {
+      return { rondaRepesca: rc.rondaRepesca, posicionBronce: rc.posicion, campo: 'judoka1Id' }
+    }
+    if (
+      rc.fuente2.tipo === 'perdedor_principal' &&
+      rc.fuente2.ronda === ronda &&
+      rc.fuente2.posicion === posicion
+    ) {
+      return { rondaRepesca: rc.rondaRepesca, posicionBronce: rc.posicion, campo: 'judoka2Id' }
     }
   }
   return null

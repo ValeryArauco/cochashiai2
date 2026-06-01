@@ -17,6 +17,7 @@ export interface Inscripcion {
   aprobadoPorSenseiId?: string
   fechaAprobacionSensei?: string
   estado: EstadoInscripcion
+  descalificadoPeso?: boolean
   judoka?: Judoka
   torneoCategoria?: TorneoCategoria
 }

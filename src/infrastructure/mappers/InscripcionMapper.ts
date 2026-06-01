@@ -49,6 +49,7 @@ export class InscripcionMapper {
       aprobadoPorSenseiId: dto.aprobado_por_sensei_id,
       fechaAprobacionSensei: dto.fecha_aprobacion_sensei,
       estado: dto.estado as EstadoInscripcion,
+      descalificadoPeso: dto.descalificado_peso ?? false,
       judoka,
       torneoCategoria,
     }

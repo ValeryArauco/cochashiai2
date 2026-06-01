@@ -12,6 +12,7 @@ const mockRepo: jest.Mocked<IInscripcionRepository> = {
   desmarcarPagado: jest.fn(),
   cambiarCategoria: jest.fn(),
   eliminar: jest.fn(),
+  descalificarPorPeso: jest.fn(),
 }
 
 const useCase = new AprobarInscripcionSensei(mockRepo)

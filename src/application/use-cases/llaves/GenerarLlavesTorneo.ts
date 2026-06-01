@@ -4,7 +4,7 @@ import { Combate } from '../../../domain/models/Combate'
 import { Inscripcion } from '../../../domain/models/Inscripcion'
 import { ISeedingStrategy } from './seeding/ISeedingStrategy'
 import { CinturonStrategy } from './seeding/CinturonStrategy'
-import { nextPow2, getSeedSlots, slotToPool, buildSlots } from './GenerarLlaves'
+import { nextPow2, getSeedSlots, slotToPool, buildSlots, buildRepesca } from './GenerarLlaves'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -121,26 +121,21 @@ function construirEliminacion(
     }
   }
 
-  // Repesca (bronces)
-  const numBronce = S >= 8 ? 2 : S >= 4 ? 1 : 0
-  const qfRonda = S >= 16 ? rondas - 2 : 1
-  type RepescaEntry = { bronce: number; alimentadoPorQF: { ronda: number; posicion: number }[] }
-  const repescaMap: RepescaEntry[] = []
+  // Repesca (medallas de bronce — sistema multi-ronda)
+  const repescaEstructura = buildRepesca(S, rondas)
 
-  for (let i = 1; i <= numBronce; i++) {
-    combates.push({
-      llaveId: '', ronda: rondas + 1, posicion: i, fase: 'repesca',
-      judoka1Ippones: 0, judoka1Wazaris: 0, judoka1Shidos: 0,
-      judoka2Ippones: 0, judoka2Wazaris: 0, judoka2Shidos: 0,
-      estado: 'pendiente',
-    })
-    repescaMap.push({
-      bronce: i,
-      alimentadoPorQF: [
-        { ronda: qfRonda, posicion: i * 2 - 1 },
-        { ronda: qfRonda, posicion: i * 2 },
-      ],
-    })
+  if (repescaEstructura) {
+    for (const rc of repescaEstructura.combates) {
+      combates.push({
+        llaveId: '',
+        ronda: rondas + rc.rondaRepesca,
+        posicion: rc.posicion,
+        fase: 'repesca',
+        judoka1Ippones: 0, judoka1Wazaris: 0, judoka1Shidos: 0,
+        judoka2Ippones: 0, judoka2Wazaris: 0, judoka2Shidos: 0,
+        estado: 'pendiente',
+      })
+    }
   }
 
   const poolMap: Record<string, string> = {}
@@ -160,8 +155,8 @@ function construirEliminacion(
       clubId: i.judoka?.clubId,
       pool: poolMap[i.judokaId],
     })),
-    tieneRepesca: numBronce > 0,
-    repesca: numBronce > 0 ? { qfRonda, combatesBronce: repescaMap } : null,
+    tieneRepesca: repescaEstructura !== null,
+    repesca: repescaEstructura ?? null,
   }
   return { combates, estructura }
 }

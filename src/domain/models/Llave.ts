@@ -1,5 +1,16 @@
 export type TipoBracket = 'single_elimination' | 'double_elimination' | 'round_robin'
 
+export type RepescaFuente =
+  | { tipo: 'perdedor_principal'; ronda: number; posicion: number }
+  | { tipo: 'ganador_repesca'; rondaRepesca: number; posicion: number }
+
+export interface RepescaCombateEstructura {
+  rondaRepesca: number
+  posicion: number
+  fuente1: RepescaFuente
+  fuente2: RepescaFuente
+}
+
 export interface EstructuraLlave {
   rondas: number
   slots: number
@@ -9,11 +20,7 @@ export interface EstructuraLlave {
   participantes: Array<{ judokaId: string; cinturon: string; clubId?: string; pool: string }>
   tieneRepesca: boolean
   repesca?: {
-    qfRonda: number
-    combatesBronce: Array<{
-      bronce: number
-      alimentadoPorQF: Array<{ ronda: number; posicion: number }>
-    }>
+    combates: RepescaCombateEstructura[]
   }
 }
 

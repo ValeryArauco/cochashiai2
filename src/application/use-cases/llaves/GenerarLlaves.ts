@@ -1,6 +1,6 @@
 import { ILlaveRepository } from '../../../domain/repositories/ILlaveRepository'
 import { IInscripcionRepository } from '../../../domain/repositories/IInscripcionRepository'
-import { Llave, TipoBracket } from '../../../domain/models/Llave'
+import { Llave, TipoBracket, RepescaCombateEstructura } from '../../../domain/models/Llave'
 import { Combate } from '../../../domain/models/Combate'
 import { Inscripcion } from '../../../domain/models/Inscripcion'
 import { ISeedingStrategy } from './seeding/ISeedingStrategy'
@@ -127,6 +127,75 @@ export function buildSlots(sembrados: Inscripcion[], S: number, byes: number): {
   return { slots, byeSlots }
 }
 
+/**
+ * Genera la estructura de repesca (medalla de bronce) con múltiples rondas.
+ *
+ * S = 4  → 1 combate: perdedores de SF se enfrentan
+ * S >= 8 → 5 combates en 3 rondas:
+ *   Repesca R1: mini-bracket con los 4 perdedores de cuartos (2 combates)
+ *   Repesca R2: partido de perdedores de SF (pos 1) + final del mini-bracket (pos 2)
+ *   Repesca R3: final de bronce (ganador R2-pos1 vs ganador R2-pos2)
+ */
+export function buildRepesca(S: number, rondas: number): { combates: RepescaCombateEstructura[] } | null {
+  if (S < 4) return null
+
+  if (S === 4) {
+    // SF losers → 1 bronze
+    return {
+      combates: [
+        {
+          rondaRepesca: 1,
+          posicion: 1,
+          fuente1: { tipo: 'perdedor_principal', ronda: 1, posicion: 1 },
+          fuente2: { tipo: 'perdedor_principal', ronda: 1, posicion: 2 },
+        },
+      ],
+    }
+  }
+
+  // S >= 8: qfRonda = ronda donde hay 4 combates (cuartos de final)
+  const qfRonda = S >= 16 ? rondas - 2 : 1
+  const sfRonda = rondas - 1
+
+  return {
+    combates: [
+      // Repesca R1: 4 perdedores de cuartos → 2 partidos
+      {
+        rondaRepesca: 1,
+        posicion: 1,
+        fuente1: { tipo: 'perdedor_principal', ronda: qfRonda, posicion: 1 },
+        fuente2: { tipo: 'perdedor_principal', ronda: qfRonda, posicion: 2 },
+      },
+      {
+        rondaRepesca: 1,
+        posicion: 2,
+        fuente1: { tipo: 'perdedor_principal', ronda: qfRonda, posicion: 3 },
+        fuente2: { tipo: 'perdedor_principal', ronda: qfRonda, posicion: 4 },
+      },
+      // Repesca R2: perdedores de SF se enfrentan (pos 1) + final del mini-bracket QF (pos 2)
+      {
+        rondaRepesca: 2,
+        posicion: 1,
+        fuente1: { tipo: 'perdedor_principal', ronda: sfRonda, posicion: 1 },
+        fuente2: { tipo: 'perdedor_principal', ronda: sfRonda, posicion: 2 },
+      },
+      {
+        rondaRepesca: 2,
+        posicion: 2,
+        fuente1: { tipo: 'ganador_repesca', rondaRepesca: 1, posicion: 1 },
+        fuente2: { tipo: 'ganador_repesca', rondaRepesca: 1, posicion: 2 },
+      },
+      // Repesca R3: Final de bronce
+      {
+        rondaRepesca: 3,
+        posicion: 1,
+        fuente1: { tipo: 'ganador_repesca', rondaRepesca: 2, posicion: 1 },
+        fuente2: { tipo: 'ganador_repesca', rondaRepesca: 2, posicion: 2 },
+      },
+    ],
+  }
+}
+
 // ── Use Case ──────────────────────────────────────────────────────────────────
 
 export class GenerarLlaves {
@@ -175,6 +244,15 @@ export class GenerarLlaves {
       const j2 = slots[2 * pos]   // null = bye slot
       const esBye = j2 === null
 
+      // Descalificación por peso: el judoka entra al bracket pero pierde por WO
+      const j1DQ = !esBye && (j1?.descalificadoPeso === true)
+      const j2DQ = !esBye && (j2?.descalificadoPeso === true)
+      const hayDQ = j1DQ || j2DQ
+
+      const ganadorDQ = hayDQ
+        ? (j1DQ ? j2!.judokaId : j1!.judokaId)
+        : undefined
+
       combates.push({
         llaveId: '',
         ronda: 1,
@@ -182,13 +260,14 @@ export class GenerarLlaves {
         fase: 'principal',
         judoka1Id: j1?.judokaId,
         judoka2Id: j2?.judokaId,
-        ganadorId: esBye ? j1!.judokaId : undefined,
+        ganadorId: esBye ? j1!.judokaId : ganadorDQ,
+        tipoVictoria: hayDQ ? 'wo' : undefined,
         judoka1Ippones: 0, judoka1Wazaris: 0, judoka1Shidos: 0,
         judoka2Ippones: 0, judoka2Wazaris: 0, judoka2Shidos: 0,
-        estado: esBye ? 'bye' : 'pendiente',
-        tatami: numTatamis > 0 && !esBye ? (tatamiIdx % numTatamis) + 1 : undefined,
+        estado: esBye ? 'bye' : hayDQ ? 'finalizado' : 'pendiente',
+        tatami: numTatamis > 0 && !esBye && !hayDQ ? (tatamiIdx % numTatamis) + 1 : undefined,
       })
-      if (!esBye) tatamiIdx++
+      if (!esBye && !hayDQ) tatamiIdx++
     }
 
     // ── 6. Rondas 2..N (placeholders) ────────────────────────────────────────
@@ -208,40 +287,20 @@ export class GenerarLlaves {
     }
 
     // ── 7. Repesca (medallas de bronce) ───────────────────────────────────────
-    // S >= 8 → QF existe → 2 bronces (Pool A/B losers, Pool C/D losers)
-    // S = 4  → SF directa → 1 bronce (los 2 perdedores de la SF)
-    // S = 2  → solo final, sin repesca
-    const numBronce = S >= 8 ? 2 : S >= 4 ? 1 : 0
+    const repescaEstructura = buildRepesca(S, rondas)
 
-    // Ronda de cuartos de final que alimenta la repesca:
-    //   S=4:  ronda 1 (2 SF combates, losers → 1 bronce)
-    //   S=8:  ronda 1 (4 QF combates, losers → 2 bronces)
-    //   S=16: ronda 2 (4 QF combates, losers → 2 bronces)
-    //   S=32: ronda 3, etc.
-    const qfRonda = S >= 16 ? rondas - 2 : 1
-
-    type RepescaEntry = { bronce: number; alimentadoPorQF: { ronda: number; posicion: number }[] }
-    const repescaMap: RepescaEntry[] = []
-
-    for (let i = 1; i <= numBronce; i++) {
-      combates.push({
-        llaveId: '',
-        ronda: rondas + 1,   // ronda > rondas principales = fase de repesca
-        posicion: i,
-        fase: 'repesca',
-        judoka1Ippones: 0, judoka1Wazaris: 0, judoka1Shidos: 0,
-        judoka2Ippones: 0, judoka2Wazaris: 0, judoka2Shidos: 0,
-        estado: 'pendiente',
-      })
-      // Bronce 1: perdedores de QF posiciones 1 y 2 (lado izquierdo)
-      // Bronce 2: perdedores de QF posiciones 3 y 4 (lado derecho)
-      repescaMap.push({
-        bronce: i,
-        alimentadoPorQF: [
-          { ronda: qfRonda, posicion: i * 2 - 1 },
-          { ronda: qfRonda, posicion: i * 2 },
-        ],
-      })
+    if (repescaEstructura) {
+      for (const rc of repescaEstructura.combates) {
+        combates.push({
+          llaveId: '',
+          ronda: rondas + rc.rondaRepesca,
+          posicion: rc.posicion,
+          fase: 'repesca',
+          judoka1Ippones: 0, judoka1Wazaris: 0, judoka1Shidos: 0,
+          judoka2Ippones: 0, judoka2Wazaris: 0, judoka2Shidos: 0,
+          estado: 'pendiente',
+        })
+      }
     }
 
     // ── 8. Estructura (metadata para la UI) ──────────────────────────────────
@@ -262,8 +321,8 @@ export class GenerarLlaves {
         clubId: i.judoka?.clubId,
         pool: poolMap[i.judokaId],
       })),
-      tieneRepesca: numBronce > 0,
-      repesca: numBronce > 0 ? { qfRonda, combatesBronce: repescaMap } : null,
+      tieneRepesca: repescaEstructura !== null,
+      repesca: repescaEstructura ?? null,
     }
 
     return await this.llaveRepo.crear(
