@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -7,15 +8,13 @@ export async function GET(request: NextRequest) {
   const code  = searchParams.get('code')
   const error = searchParams.get('error')
 
-  // El proveedor OAuth rechazó la solicitud (ej. usuario canceló en Google)
   if (error || !code) {
     return NextResponse.redirect(`${origin}/login?error=sin_sesion`)
   }
 
   const cookieStore = await cookies()
 
-  // createServerClient tiene acceso a las cookies HttpOnly donde está
-  // el code_verifier del flujo PKCE — necesario para el intercambio
+  // Cliente SSR: necesario para el intercambio PKCE (accede al code_verifier en cookies HttpOnly)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -42,11 +41,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=no_registrado`)
   }
 
-  // Verificar que el correo existe en la tabla usuarios
-  const { data: perfil } = await supabase
+  // Cliente admin (service role): bypasea RLS para verificar si el correo está registrado.
+  // El auth_user_id del usuario OAuth puede diferir del guardado en la tabla,
+  // por lo que una consulta con anon key sería bloqueada por las políticas RLS.
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { data: perfil } = await supabaseAdmin
     .from('usuarios')
     .select('id')
-    .eq('correo', email)
+    .ilike('correo', email)   // ilike: insensible a mayúsculas/minúsculas
     .maybeSingle()
 
   if (!perfil) {
