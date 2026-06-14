@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import { IAuthRepository } from '../../domain/repositories/IAuthRepository'
-import { Usuario, RolUsuario } from '../../domain/models/Usuario'
+import { Usuario } from '../../domain/models/Usuario'
 import { UsuarioMapper } from '../mappers/UsuarioMapper'
 import { UsuarioDTO } from '../dtos/UsuarioDTO'
 
@@ -20,7 +20,6 @@ export class SupabaseAuthRepository implements IAuthRepository {
   }
 
   async logout(): Promise<void> {
-    
     const { error } = await supabase.auth.signOut()
     if (error) throw new Error(error.message)
   }
@@ -63,7 +62,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
   }
 
   private async obtenerDatosUsuario(authUserId: string, email?: string): Promise<Usuario> {
-    // Ruta principal: auth_user_id coincide (email/contraseña o OAuth con identity linking)
+    // Ruta principal: email/contraseña — auth_user_id coincide directamente
     const { data } = await supabase
       .from('usuarios')
       .select('*')
@@ -72,15 +71,15 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
     if (data) return UsuarioMapper.toDomain(data as UsuarioDTO)
 
-    // Fallback para OAuth sin identity linking: el auth_user_id de Google es distinto
-    // al del registro original. El email viene del getSession() — nunca de getUser()
-    // para evitar bloquear la máquina de estados de Supabase Auth.
+    // Fallback para Google OAuth: Supabase crea un auth_user_id diferente al del
+    // registro original. La política RLS debe permitir correo = auth.email() para
+    // que esta consulta funcione. El email viene de getSession(), nunca de getUser().
     if (!email) throw new Error('No se encontró el perfil del usuario')
 
     const { data: byEmail } = await supabase
       .from('usuarios')
       .select('*')
-      .eq('correo', email)
+      .ilike('correo', email)
       .maybeSingle()
 
     if (!byEmail) throw new Error('No se encontró el perfil del usuario')

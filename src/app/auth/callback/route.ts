@@ -11,8 +11,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=sin_sesion`)
   }
 
-  // Acumula los cambios de cookies (sesión, code_verifier, etc.)
-  // para aplicarlos en el NextResponse final en vez de en next/headers
   const pendingCookies: { name: string; value: string; options: object }[] = []
 
   const supabase = createServerClient(
@@ -20,9 +18,7 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // Lee desde la request (accede al code_verifier HttpOnly)
         getAll: () => request.cookies.getAll(),
-        // Acumula en memoria — se vuelcan al NextResponse justo antes de retornar
         setAll: (list) =>
           list.forEach(({ name, value, options }) =>
             pendingCookies.push({ name, value, options: options ?? {} })
@@ -31,11 +27,10 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  // Helper: crea el redirect y le aplica todas las cookies acumuladas
   function makeRedirect(url: string) {
     const res = NextResponse.redirect(url)
     pendingCookies.forEach(({ name, value, options }) =>
-      res.cookies.set({ name, value, ...(options as object) })
+      res.cookies.set({ name, value, ...options })
     )
     return res
   }
@@ -52,9 +47,7 @@ export async function GET(request: NextRequest) {
     return makeRedirect(`${origin}/login?error=no_registrado`)
   }
 
-  // Service role bypasea RLS para verificar el correo:
-  // el auth_user_id del OAuth difiere del guardado en usuarios,
-  // así que el cliente anon sería bloqueado por las políticas RLS.
+  // Service role para bypassear RLS: verifica que el correo esté en la tabla usuarios
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
