@@ -7,10 +7,7 @@ import { UsuarioDTO } from '../dtos/UsuarioDTO'
 export class SupabaseAuthRepository implements IAuthRepository {
 
   async login(email: string, password: string): Promise<Usuario> {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       if (error.message === 'Invalid login credentials') {
@@ -19,7 +16,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error(error.message)
     }
 
-    return await this.obtenerDatosUsuario(data.user.id)
+    return await this.obtenerDatosUsuario(data.user.id, data.user.email ?? undefined)
   }
 
   async logout(): Promise<void> {
@@ -30,10 +27,11 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
   async obtenerSesionActual(): Promise<Usuario | null> {
     const { data } = await supabase.auth.getSession()
-
     if (!data.session) return null
-
-    return await this.obtenerDatosUsuario(data.session.user.id)
+    return await this.obtenerDatosUsuario(
+      data.session.user.id,
+      data.session.user.email ?? undefined,
+    )
   }
 
   async listarUsuariosMesa(): Promise<Usuario[]> {
@@ -64,8 +62,8 @@ export class SupabaseAuthRepository implements IAuthRepository {
     if (error) throw new Error(error.message)
   }
 
-  private async obtenerDatosUsuario(authUserId: string): Promise<Usuario> {
-    // Ruta principal: login por email/contraseña — el auth_user_id coincide directamente
+  private async obtenerDatosUsuario(authUserId: string, email?: string): Promise<Usuario> {
+    // Ruta principal: auth_user_id coincide (email/contraseña o OAuth con identity linking)
     const { data } = await supabase
       .from('usuarios')
       .select('*')
@@ -74,10 +72,9 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
     if (data) return UsuarioMapper.toDomain(data as UsuarioDTO)
 
-    // Fallback para OAuth (Google): Supabase puede crear un auth_user_id distinto
-    // si "link identity" no está habilitado. Buscamos por correo del usuario de sesión.
-    const { data: authData } = await supabase.auth.getUser()
-    const email = authData.user?.email
+    // Fallback para OAuth sin identity linking: el auth_user_id de Google es distinto
+    // al del registro original. El email viene del getSession() — nunca de getUser()
+    // para evitar bloquear la máquina de estados de Supabase Auth.
     if (!email) throw new Error('No se encontró el perfil del usuario')
 
     const { data: byEmail } = await supabase

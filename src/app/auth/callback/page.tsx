@@ -1,45 +1,39 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import { supabase } from '../../../lib/supabase'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
-  const procesado = useRef(false)
 
   useEffect(() => {
-    if (procesado.current) return
-    procesado.current = true
+    // Si Supabase redirigió con error (ej. usuario canceló en Google)
+    const params = new URLSearchParams(globalThis.location.search)
+    if (params.get('error')) {
+      router.replace('/login?error=sin_sesion')
+      return
+    }
 
-    async function validar() {
-      // Supabase puede devolver un error en la URL (ej. acceso denegado en Google)
-      const params = new URLSearchParams(globalThis.location.search)
-      if (params.get('error')) {
+    let terminado = false
+
+    async function validar(session: { user: { id: string; email?: string | null } } | null) {
+      if (terminado) return
+      terminado = true
+
+      if (!session) {
         router.replace('/login?error=sin_sesion')
         return
       }
 
-      // esperar a que el createBrowserClient intercambie el code por sesión (PKCE)
-      let sesion = null
-      for (let i = 0; i < 20; i++) {
-        const { data } = await supabase.auth.getSession()
-        if (data.session) { sesion = data.session; break }
-        await new Promise(r => setTimeout(r, 250))
-      }
-
-      if (!sesion) {
-        router.replace('/login?error=sin_sesion')
-        return
-      }
-
-      // Validar por correo: así funciona tanto con como sin identity linking
-      // (Si Supabase creó un nuevo auth_user_id distinto, igual encontramos al usuario por correo)
-      const email = sesion.user.email
+      const email = session.user.email
       if (!email) {
-        await supabase.auth.signOut()
-        router.replace('/login?error=no_registrado')
+        // signOut fuera del ciclo de onAuthStateChange para no bloquear la auth machine
+        setTimeout(async () => {
+          await supabase.auth.signOut()
+          router.replace('/login?error=no_registrado')
+        }, 0)
         return
       }
 
@@ -50,15 +44,42 @@ export default function AuthCallbackPage() {
         .maybeSingle()
 
       if (!perfil) {
-        await supabase.auth.signOut()
-        router.replace('/login?error=no_registrado')
+        setTimeout(async () => {
+          await supabase.auth.signOut()
+          router.replace('/login?error=no_registrado')
+        }, 0)
         return
       }
 
       router.replace('/torneos')
     }
 
-    validar()
+    // onAuthStateChange es la forma correcta de esperar que el intercambio PKCE termine.
+    // SIGNED_IN se dispara exactamente cuando el code ya fue canjeado por tokens.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        // Ejecutar fuera del callback para no bloquear la auth machine
+        setTimeout(() => validar(session), 0)
+      }
+    })
+
+    // También revisar si la sesión ya estaba disponible al cargar la página
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) validar(data.session)
+    })
+
+    // Timeout de seguridad: si en 15 s no pasa nada, redirigir con error
+    const timeout = setTimeout(() => {
+      if (!terminado) {
+        terminado = true
+        router.replace('/login?error=sin_sesion')
+      }
+    }, 15_000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [router])
 
   return (
