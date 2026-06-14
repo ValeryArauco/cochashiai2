@@ -56,15 +56,37 @@ export class SupabaseAuthRepository implements IAuthRepository {
     if (error) throw new Error('No se pudo actualizar el tatami asignado')
   }
 
+  async iniciarSesionConGoogle(redirectTo: string): Promise<void> {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    })
+    if (error) throw new Error(error.message)
+  }
+
   private async obtenerDatosUsuario(authUserId: string): Promise<Usuario> {
-    const { data, error } = await supabase
+    // Ruta principal: login por email/contraseña — el auth_user_id coincide directamente
+    const { data } = await supabase
       .from('usuarios')
       .select('*')
-      .eq('auth_user_id', authUserId)  
-      .single()
+      .eq('auth_user_id', authUserId)
+      .maybeSingle()
 
-    if (error || !data) throw new Error('No se encontró el perfil del usuario')
+    if (data) return UsuarioMapper.toDomain(data as UsuarioDTO)
 
-    return UsuarioMapper.toDomain(data as UsuarioDTO) 
+    // Fallback para OAuth (Google): Supabase puede crear un auth_user_id distinto
+    // si "link identity" no está habilitado. Buscamos por correo del usuario de sesión.
+    const { data: authData } = await supabase.auth.getUser()
+    const email = authData.user?.email
+    if (!email) throw new Error('No se encontró el perfil del usuario')
+
+    const { data: byEmail } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('correo', email)
+      .maybeSingle()
+
+    if (!byEmail) throw new Error('No se encontró el perfil del usuario')
+    return UsuarioMapper.toDomain(byEmail as UsuarioDTO)
   }
 }
