@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -12,38 +11,50 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=sin_sesion`)
   }
 
-  const cookieStore = await cookies()
+  // Acumula los cambios de cookies (sesión, code_verifier, etc.)
+  // para aplicarlos en el NextResponse final en vez de en next/headers
+  const pendingCookies: { name: string; value: string; options: object }[] = []
 
-  // Cliente SSR: necesario para el intercambio PKCE (accede al code_verifier en cookies HttpOnly)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => cookieStore.getAll(),
+        // Lee desde la request (accede al code_verifier HttpOnly)
+        getAll: () => request.cookies.getAll(),
+        // Acumula en memoria — se vuelcan al NextResponse justo antes de retornar
         setAll: (list) =>
           list.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            pendingCookies.push({ name, value, options: options ?? {} })
           ),
       },
     }
   )
 
+  // Helper: crea el redirect y le aplica todas las cookies acumuladas
+  function makeRedirect(url: string) {
+    const res = NextResponse.redirect(url)
+    pendingCookies.forEach(({ name, value, options }) =>
+      res.cookies.set({ name, value, ...(options as object) })
+    )
+    return res
+  }
+
   const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
   if (exchangeError || !data.session) {
-    return NextResponse.redirect(`${origin}/login?error=sin_sesion`)
+    return makeRedirect(`${origin}/login?error=sin_sesion`)
   }
 
   const email = data.session.user.email
   if (!email) {
     await supabase.auth.signOut()
-    return NextResponse.redirect(`${origin}/login?error=no_registrado`)
+    return makeRedirect(`${origin}/login?error=no_registrado`)
   }
 
-  // Cliente admin (service role): bypasea RLS para verificar si el correo está registrado.
-  // El auth_user_id del usuario OAuth puede diferir del guardado en la tabla,
-  // por lo que una consulta con anon key sería bloqueada por las políticas RLS.
+  // Service role bypasea RLS para verificar el correo:
+  // el auth_user_id del OAuth difiere del guardado en usuarios,
+  // así que el cliente anon sería bloqueado por las políticas RLS.
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -52,13 +63,13 @@ export async function GET(request: NextRequest) {
   const { data: perfil } = await supabaseAdmin
     .from('usuarios')
     .select('id')
-    .ilike('correo', email)   // ilike: insensible a mayúsculas/minúsculas
+    .ilike('correo', email)
     .maybeSingle()
 
   if (!perfil) {
     await supabase.auth.signOut()
-    return NextResponse.redirect(`${origin}/login?error=no_registrado`)
+    return makeRedirect(`${origin}/login?error=no_registrado`)
   }
 
-  return NextResponse.redirect(`${origin}/torneos`)
+  return makeRedirect(`${origin}/torneos`)
 }
