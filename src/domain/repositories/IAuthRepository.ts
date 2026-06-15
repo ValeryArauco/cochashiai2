@@ -6,5 +6,4 @@ export interface IAuthRepository {
   obtenerSesionActual(): Promise<Usuario | null>
   listarUsuariosMesa(): Promise<Usuario[]>
   actualizarTatamiAsignado(usuarioId: string, tatami: number | null): Promise<void>
-  iniciarSesionConGoogle(redirectTo: string): Promise<void>
 }

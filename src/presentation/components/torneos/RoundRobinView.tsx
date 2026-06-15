@@ -71,7 +71,7 @@ const ESTADO_COLOR: Record<string, 'default' | 'warning' | 'info' | 'success'> =
 
 export function RoundRobinView({ combates, rol, onIniciar, onResultado }: Props) {
   const standings = calcularStandings(combates)
-  const puedeGestionar = rol === 'admin'
+  const puedeGestionar = rol === 'admin' || rol === 'asociacion'
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

@@ -8,7 +8,6 @@ const mockAuthRepo: jest.Mocked<IAuthRepository> = {
     obtenerSesionActual: jest.fn(),
     listarUsuariosMesa: jest.fn(),
     actualizarTatamiAsignado: jest.fn(),
-    iniciarSesionConGoogle: jest.fn(),
 }
 
 const loginUseCase = new Login(mockAuthRepo)

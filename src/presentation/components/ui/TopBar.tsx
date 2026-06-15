@@ -35,7 +35,7 @@ export function TopBar() {
                     <Image src="/logo.svg" alt="Logo" width={100} height={100} priority />
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                {usuario?.rol === 'admin' && (
+                {(usuario?.rol === 'admin' || usuario?.rol === 'asociacion') && (
                     <><Tooltip title="Torneos">
                         <IconButton
                             onClick={() => router.push('/torneos')}

@@ -51,7 +51,7 @@ interface MatchBoxProps {
 
 function MatchBox({ combate: c, maxRonda, rol, esRepesca = false, onIniciar, onResultado }: MatchBoxProps) {
   const esBye = c.estado === 'bye'
-  const isAdmin = rol === 'admin'
+  const isAdmin = rol === 'admin' || rol === 'asociacion'
   const ambosPresentes = !!(c.judoka1Id && c.judoka2Id)
   const puedeIniciar = isAdmin && c.estado === 'pendiente' && ambosPresentes
   const puedeResultado = isAdmin && (c.estado === 'en_curso' || (c.estado === 'pendiente' && ambosPresentes))

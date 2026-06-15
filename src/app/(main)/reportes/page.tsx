@@ -44,7 +44,7 @@ export default function ReportesPage() {
     } = useAnalytics()
 
     useEffect(() => {
-        if (!cargandoAuth && usuario?.rol !== 'admin') {
+        if (!cargandoAuth && usuario?.rol !== 'admin' && usuario?.rol !== 'asociacion') {
             router.replace('/torneos')
         }
     }, [cargandoAuth, usuario, router])
@@ -63,7 +63,7 @@ export default function ReportesPage() {
         }
     }, [tabActual, inscritosPorTorneo.length, cargarDatosTorneos])
 
-    if (cargandoAuth || usuario?.rol !== 'admin') return null
+    if (cargandoAuth || (usuario?.rol !== 'admin' && usuario?.rol !== 'asociacion')) return null
 
     return (
         <Container sx={{ py: 4, maxWidth: 1100 }}>

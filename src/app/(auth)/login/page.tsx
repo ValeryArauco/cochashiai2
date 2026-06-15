@@ -1,6 +1,5 @@
-import { Suspense } from 'react'
 import { LoginForm } from '../../../presentation/components/auth/LoginForm'
-import { Grid, Box, CircularProgress } from '@mui/material'
+import { Grid, Box } from '@mui/material'
 
 export default function LoginPage() {
     return (
@@ -57,9 +56,7 @@ export default function LoginPage() {
                 px: 4,
 
             }}>
-                <Suspense fallback={<CircularProgress />}>
-                    <LoginForm />
-                </Suspense>
+                <LoginForm />
             </Grid>
 
 

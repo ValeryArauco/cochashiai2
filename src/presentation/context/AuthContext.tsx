@@ -38,9 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUsuario(null)
         setCargando(false)
-        // No redirigir si el callback de OAuth está manejando la navegación
-        const enCallback = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth/')
-        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !enCallback) {
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
           router.replace('/login')
         }
         return

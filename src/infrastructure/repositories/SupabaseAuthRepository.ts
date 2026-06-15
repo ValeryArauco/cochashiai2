@@ -16,7 +16,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
       throw new Error(error.message)
     }
 
-    return await this.obtenerDatosUsuario(data.user.id, data.user.email ?? undefined)
+    return await this.obtenerDatosUsuario(data.user.id)
   }
 
   async logout(): Promise<void> {
@@ -27,10 +27,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
   async obtenerSesionActual(): Promise<Usuario | null> {
     const { data } = await supabase.auth.getSession()
     if (!data.session) return null
-    return await this.obtenerDatosUsuario(
-      data.session.user.id,
-      data.session.user.email ?? undefined,
-    )
+    return await this.obtenerDatosUsuario(data.session.user.id)
   }
 
   async listarUsuariosMesa(): Promise<Usuario[]> {
@@ -53,36 +50,14 @@ export class SupabaseAuthRepository implements IAuthRepository {
     if (error) throw new Error('No se pudo actualizar el tatami asignado')
   }
 
-  async iniciarSesionConGoogle(redirectTo: string): Promise<void> {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo },
-    })
-    if (error) throw new Error(error.message)
-  }
-
-  private async obtenerDatosUsuario(authUserId: string, email?: string): Promise<Usuario> {
-    // Ruta principal: email/contraseña — auth_user_id coincide directamente
+  private async obtenerDatosUsuario(authUserId: string): Promise<Usuario> {
     const { data } = await supabase
       .from('usuarios')
       .select('*')
       .eq('auth_user_id', authUserId)
       .maybeSingle()
 
-    if (data) return UsuarioMapper.toDomain(data as UsuarioDTO)
-
-    // Fallback para Google OAuth: Supabase crea un auth_user_id diferente al del
-    // registro original. La política RLS debe permitir correo = auth.email() para
-    // que esta consulta funcione. El email viene de getSession(), nunca de getUser().
-    if (!email) throw new Error('No se encontró el perfil del usuario')
-
-    const { data: byEmail } = await supabase
-      .from('usuarios')
-      .select('*')
-      .ilike('correo', email)
-      .maybeSingle()
-
-    if (!byEmail) throw new Error('No se encontró el perfil del usuario')
-    return UsuarioMapper.toDomain(byEmail as UsuarioDTO)
+    if (!data) throw new Error('No se encontró el perfil del usuario')
+    return UsuarioMapper.toDomain(data as UsuarioDTO)
   }
 }

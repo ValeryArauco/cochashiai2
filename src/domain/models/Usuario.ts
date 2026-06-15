@@ -1,4 +1,8 @@
-export type RolUsuario = 'admin' | 'sensei' | 'judoka' | 'mesa'
+export type RolUsuario = 'admin' | 'asociacion' | 'sensei' | 'judoka' | 'mesa'
+
+export function esAdminOAsociacion(rol: RolUsuario): boolean {
+  return rol === 'admin' || rol === 'asociacion'
+}
 export type Genero = 'Masculino' | 'Femenino' | 'Prefiero no decir'
 
 export interface Usuario {

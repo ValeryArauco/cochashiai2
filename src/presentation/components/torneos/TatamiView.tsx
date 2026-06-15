@@ -39,11 +39,11 @@ function CombateCard({
 }) {
   const [reasignando, setReasignando] = useState(false)
   const esBye = c.estado === 'bye'
-  const puedeActuar = rol === 'admin' || rol === 'mesa'
+  const puedeActuar = rol === 'admin' || rol === 'asociacion' || rol === 'mesa'
   const ambosPresentes = !!(c.judoka1Id && c.judoka2Id)
   const puedeIniciar = puedeActuar && c.estado === 'pendiente' && ambosPresentes
   const puedeResultado = puedeActuar && (c.estado === 'en_curso' || (c.estado === 'pendiente' && ambosPresentes))
-  const puedeReasignar = rol === 'admin' && c.estado !== 'finalizado' && c.estado !== 'bye'
+  const puedeReasignar = (rol === 'admin' || rol === 'asociacion') && c.estado !== 'finalizado' && c.estado !== 'bye'
   const enCurso = c.estado === 'en_curso'
 
   const j1Gana = c.ganadorId === c.judoka1Id
